@@ -78,6 +78,9 @@ DATABASES = {
     }
 }
 
+if env_bool("DJANGO_USE_SQLITE"):
+    DATABASES["default"] = {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}
+
 AUTH_USER_MODEL = "accounts.User"
 
 AUTH_PASSWORD_VALIDATORS = [

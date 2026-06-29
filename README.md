@@ -42,6 +42,10 @@ Puis relance:
 docker compose up --build mobile
 ```
 
+Pour le paiement reel en mode test, renseigne `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` et `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`. Le webhook cible `/api/v1/payments/webhook/`.
+
+Les notifications push exigent un development build Expo configure avec les fichiers Firebase/APNs natifs. `FIREBASE_CREDENTIALS_PATH` doit pointer vers le compte de service Firebase monte dans le backend.
+
 Alternative hors Docker:
 
 ```powershell

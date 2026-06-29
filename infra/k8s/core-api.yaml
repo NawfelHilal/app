@@ -18,6 +18,21 @@ spec:
           image: fleetpro/core-api:latest
           ports:
             - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health/
+              port: 8000
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health/
+              port: 8000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           envFrom:
             - secretRef:
                 name: fleetpro-secrets
@@ -33,4 +48,3 @@ spec:
   ports:
     - port: 8000
       targetPort: 8000
-
