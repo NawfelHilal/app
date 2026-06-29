@@ -53,7 +53,7 @@ class RideLifecycle:
         ride.save()
         RideStatusEvent.objects.create(ride=ride, status=status, actor=actor)
         if status == Ride.Status.COMPLETED:
-            from apps.payments.services import SimulatedPaymentGateway
+            from apps.payments.services import PaymentCaptureService
 
-            SimulatedPaymentGateway().capture_ride(ride)
+            PaymentCaptureService().capture_ride(ride)
         return ride

@@ -7,7 +7,11 @@ class Payment(models.Model):
     class Status(models.TextChoices):
         REQUIRES_PAYMENT_METHOD = "REQUIRES_PAYMENT_METHOD", "Requires payment method"
         REQUIRES_CONFIRMATION = "REQUIRES_CONFIRMATION", "Requires confirmation"
+        REQUIRES_ACTION = "REQUIRES_ACTION", "Requires action"
+        REQUIRES_CAPTURE = "REQUIRES_CAPTURE", "Requires capture"
+        PROCESSING = "PROCESSING", "Processing"
         SUCCEEDED = "SUCCEEDED", "Succeeded"
+        CANCELED = "CANCELED", "Canceled"
         FAILED = "FAILED", "Failed"
 
     ride = models.OneToOneField(Ride, on_delete=models.PROTECT, related_name="payment")
@@ -18,4 +22,3 @@ class Payment(models.Model):
     status = models.CharField(max_length=32, choices=Status.choices, default=Status.REQUIRES_PAYMENT_METHOD)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-

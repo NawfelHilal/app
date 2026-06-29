@@ -1,14 +1,22 @@
 from django.contrib.auth import get_user_model
-from rest_framework import permissions, status, viewsets
+from django.db import transaction
+from django.db.models import Q
+from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Ride
+from .matching import RideMatcher
 from .serializers import FareQuoteResponseSerializer, FareQuoteSerializer, RideSerializer
 from .services import RideLifecycle
 
 
-class RideViewSet(viewsets.ModelViewSet):
+class RideViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
     serializer_class = RideSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -17,8 +25,15 @@ class RideViewSet(viewsets.ModelViewSet):
         if user.is_staff:
             return Ride.objects.all()
         if getattr(user, "is_driver", False):
-            return Ride.objects.filter(driver=user) | Ride.objects.filter(status=Ride.Status.REQUESTED)
+            requested = Ride.objects.filter(status=Ride.Status.REQUESTED)
+            nearby_ids = RideMatcher().nearby_ride_ids(user.id, requested)
+            return Ride.objects.filter(Q(driver=user) | Q(id__in=nearby_ids))
         return Ride.objects.filter(passenger=user)
+
+    def create(self, request, *args, **kwargs):
+        if getattr(request.user, "is_driver", False):
+            return Response({"detail": "Only passengers can request rides."}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
 
     @action(detail=False, methods=["post"])
     def quote(self, request):
@@ -29,12 +44,14 @@ class RideViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def accept(self, request, pk=None):
-        ride = self.get_object()
         if not request.user.is_driver:
             return Response({"detail": "Only drivers can accept rides."}, status=status.HTTP_403_FORBIDDEN)
-        if ride.status != Ride.Status.REQUESTED:
-            return Response({"detail": "Ride is not available."}, status=status.HTTP_409_CONFLICT)
-        ride = RideLifecycle().record(ride, Ride.Status.ACCEPTED, request.user)
+        visible_ride = self.get_object()
+        with transaction.atomic():
+            ride = Ride.objects.select_for_update().get(pk=visible_ride.pk)
+            if ride.status != Ride.Status.REQUESTED:
+                return Response({"detail": "Ride is not available."}, status=status.HTTP_409_CONFLICT)
+            ride = RideLifecycle().record(ride, Ride.Status.ACCEPTED, request.user)
         return Response(self.get_serializer(ride).data)
 
     @action(detail=True, methods=["post"])
