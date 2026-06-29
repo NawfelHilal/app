@@ -12,15 +12,20 @@ class StripePaymentGateway:
             raise RuntimeError("STRIPE_SECRET_KEY is required to create payment intents.")
 
         stripe.api_key = settings.STRIPE_SECRET_KEY
+        existing = Payment.objects.filter(ride=ride).first()
+        if existing and existing.status not in {Payment.Status.FAILED, Payment.Status.CANCELED}:
+            return existing
         intent = stripe.PaymentIntent.create(
             amount=ride.fare_cents,
             currency="eur",
+            capture_method="manual",
             automatic_payment_methods={"enabled": True},
             metadata={
                 "ride_id": str(ride.id),
                 "passenger_id": str(ride.passenger_id),
                 "commission_cents": str(ride.commission_cents),
             },
+            idempotency_key=f"fleetpro-ride-{ride.id}-payment-v1",
         )
         payment, _ = Payment.objects.update_or_create(
             ride=ride,
@@ -32,6 +37,32 @@ class StripePaymentGateway:
                 "status": intent.status.upper(),
             },
         )
+        return payment
+
+
+class PaymentCaptureService:
+    def capture_ride(self, ride: Ride) -> Payment | None:
+        try:
+            payment = ride.payment
+        except Payment.DoesNotExist:
+            return None
+        if payment.stripe_payment_intent_id.startswith("pi_simulated_"):
+            return SimulatedPaymentGateway().capture_ride(ride)
+        if payment.status == Payment.Status.SUCCEEDED:
+            return payment
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        try:
+            intent = stripe.PaymentIntent.capture(
+                payment.stripe_payment_intent_id,
+                amount_to_capture=ride.fare_cents,
+                idempotency_key=f"fleetpro-ride-{ride.id}-capture-v1",
+            )
+            payment.amount_cents = ride.fare_cents
+            payment.status = intent.status.upper()
+        except stripe.StripeError:
+            payment.status = Payment.Status.FAILED
+        payment.save(update_fields=["amount_cents", "status", "updated_at"])
         return payment
 
 
