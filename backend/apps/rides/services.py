@@ -56,4 +56,7 @@ class RideLifecycle:
             from apps.payments.services import PaymentCaptureService
 
             PaymentCaptureService().capture_ride(ride)
+        from apps.notifications.services import RideNotificationService
+
+        RideNotificationService().notify_status(ride, status, actor)
         return ride

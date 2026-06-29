@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { jwtDecode } from 'jwt-decode';
 import { api, UserRole } from '../api/client';
 import { connectGps, disconnectGps } from '../api/gps';
+import { registerPushToken } from '../api/notifications';
 
 type AuthState = {
   accessToken?: string;
@@ -30,6 +31,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       refreshToken: refresh,
       role: decodeRole(access),
     });
+    registerPushToken().catch(() => undefined);
   },
   logout: () => {
     disconnectGps();
