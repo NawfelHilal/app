@@ -5,7 +5,7 @@ import MapView, { Marker, Polyline } from 'react-native-maps';
 import { Ride } from '../api/client';
 import { colors } from '../theme/colors';
 
-type Coordinate = {
+export type MapCoordinate = {
   latitude: number;
   longitude: number;
 };
@@ -14,21 +14,27 @@ type Props = {
   compact?: boolean;
   ride?: Ride;
   simulationPhase?: Ride['status'];
+  driverCoordinate?: MapCoordinate;
 };
 
 const defaultPickup = { latitude: 48.8566, longitude: 2.3522 };
 const defaultDropoff = { latitude: 48.8443, longitude: 2.373 };
 const driverStart = { latitude: 48.865, longitude: 2.342 };
 
-export function MapCanvas({ compact, ride, simulationPhase }: Props) {
+export function MapCanvas({ compact, ride, simulationPhase, driverCoordinate }: Props) {
   const pickup = parseCoordinate(ride?.pickup_latitude, ride?.pickup_longitude) || defaultPickup;
   const dropoff = parseCoordinate(ride?.dropoff_latitude, ride?.dropoff_longitude) || defaultDropoff;
   const phase = simulationPhase || ride?.status || 'REQUESTED';
   const animation = useMemo(() => getAnimationPath(phase, pickup, dropoff), [phase, pickup.latitude, pickup.longitude, dropoff.latitude, dropoff.longitude]);
   const [driverPosition, setDriverPosition] = useState(animation.from);
-  const [progressPath, setProgressPath] = useState<Coordinate[]>([animation.from]);
+  const [progressPath, setProgressPath] = useState<MapCoordinate[]>([animation.from]);
 
   useEffect(() => {
+    if (driverCoordinate) {
+      setDriverPosition(driverCoordinate);
+      setProgressPath((path) => [...path.slice(-24), driverCoordinate]);
+      return undefined;
+    }
     setDriverPosition(animation.from);
     setProgressPath([animation.from]);
 
@@ -51,7 +57,7 @@ export function MapCanvas({ compact, ride, simulationPhase }: Props) {
     }, 90);
 
     return () => clearInterval(timer);
-  }, [animation.from.latitude, animation.from.longitude, animation.to.latitude, animation.to.longitude, compact, phase]);
+  }, [animation.from.latitude, animation.from.longitude, animation.to.latitude, animation.to.longitude, compact, driverCoordinate?.latitude, driverCoordinate?.longitude, phase]);
 
   return (
     <View style={[styles.wrap, compact && styles.compact]}>
@@ -77,7 +83,7 @@ export function MapCanvas({ compact, ride, simulationPhase }: Props) {
           <View style={styles.driverMarker}><Text style={styles.driverMarkerText}>car</Text></View>
         </Marker>
         <Polyline coordinates={[pickup, dropoff]} strokeColor={colors.surface} strokeWidth={5} />
-        <Polyline coordinates={[animation.from, animation.to]} strokeColor={colors.success} strokeWidth={3} lineDashPattern={[6, 6]} />
+        {!driverCoordinate ? <Polyline coordinates={[animation.from, animation.to]} strokeColor={colors.success} strokeWidth={3} lineDashPattern={[6, 6]} /> : null}
         {progressPath.length > 1 ? (
           <Polyline coordinates={progressPath} strokeColor={colors.warning} strokeWidth={5} />
         ) : null}
@@ -86,7 +92,7 @@ export function MapCanvas({ compact, ride, simulationPhase }: Props) {
   );
 }
 
-function parseCoordinate(latitude?: string, longitude?: string): Coordinate | undefined {
+function parseCoordinate(latitude?: string, longitude?: string): MapCoordinate | undefined {
   if (!latitude || !longitude) {
     return undefined;
   }
@@ -96,7 +102,7 @@ function parseCoordinate(latitude?: string, longitude?: string): Coordinate | un
   };
 }
 
-function getAnimationPath(phase: Ride['status'], pickup: Coordinate, dropoff: Coordinate): { from: Coordinate; to: Coordinate } {
+function getAnimationPath(phase: Ride['status'], pickup: MapCoordinate, dropoff: MapCoordinate): { from: MapCoordinate; to: MapCoordinate } {
   if (phase === 'ACCEPTED') {
     return { from: driverStart, to: pickup };
   }
@@ -109,7 +115,7 @@ function getAnimationPath(phase: Ride['status'], pickup: Coordinate, dropoff: Co
   return { from: driverStart, to: driverStart };
 }
 
-function interpolate(from: Coordinate, to: Coordinate, progress: number): Coordinate {
+function interpolate(from: MapCoordinate, to: MapCoordinate, progress: number): MapCoordinate {
   return {
     latitude: from.latitude + (to.latitude - from.latitude) * progress,
     longitude: from.longitude + (to.longitude - from.longitude) * progress,
@@ -177,4 +183,3 @@ const darkMapStyle = [
   { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
   { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#263241' }] },
 ];
-

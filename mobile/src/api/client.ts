@@ -33,6 +33,6 @@ export type Ride = {
   final_fare_cents?: number | null;
   commission_cents: number;
   driver_earnings_cents: number;
-  payment_status?: 'REQUIRES_PAYMENT_METHOD' | 'REQUIRES_CONFIRMATION' | 'SUCCEEDED' | 'FAILED' | null;
+  payment_status?: 'REQUIRES_PAYMENT_METHOD' | 'REQUIRES_CONFIRMATION' | 'REQUIRES_ACTION' | 'REQUIRES_CAPTURE' | 'PROCESSING' | 'SUCCEEDED' | 'CANCELED' | 'FAILED' | null;
   requested_at?: string;
 };

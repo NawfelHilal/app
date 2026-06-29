@@ -1,7 +1,7 @@
 import * as Location from 'expo-location';
 import Feather from '@expo/vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getGpsSocket } from '../api/gps';
@@ -28,13 +28,35 @@ export function DriverShellScreen({ navigation }: Props) {
   const [activeTab, setActiveTab] = useState<DriverTab>('drive');
   const [online, setOnline] = useState(false);
   const { rides, loadRides, acceptRide } = useRideStore();
+  const tracking = useRef<Location.LocationSubscription | undefined>(undefined);
+  const activeRideId = rides.find((ride) => ride.status === 'ACCEPTED' || ride.status === 'IN_PROGRESS')?.id;
+  const activeRideIdRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     loadRides();
   }, [loadRides]);
 
+  useEffect(() => {
+    activeRideIdRef.current = activeRideId;
+    if (activeRideId) {
+      getGpsSocket()?.emit('ride:join', { rideId: activeRideId });
+    }
+  }, [activeRideId]);
+
+  useEffect(() => () => tracking.current?.remove(), []);
+
+  useEffect(() => {
+    if (!online) {
+      return undefined;
+    }
+    const timer = setInterval(() => loadRides().catch(() => undefined), 10000);
+    return () => clearInterval(timer);
+  }, [loadRides, online]);
+
   async function toggleOnline() {
     if (online) {
+      tracking.current?.remove();
+      tracking.current = undefined;
       setOnline(false);
       return;
     }
@@ -45,14 +67,22 @@ export function DriverShellScreen({ navigation }: Props) {
       return;
     }
 
-    const location = await Location.getCurrentPositionAsync({});
-    getGpsSocket()?.emit('driver:position', {
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-      heading: location.coords.heading,
-      speed: location.coords.speed,
-    });
+    const socket = getGpsSocket();
+    if (!socket) {
+      Alert.alert('GPS indisponible', 'Reconnecte-toi avant de passer en ligne.');
+      return;
+    }
+
+    const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    await emitPosition(socket, location, activeRideIdRef.current);
+    tracking.current = await Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.High, distanceInterval: 10, timeInterval: 5000 },
+      (nextLocation) => {
+        emitPosition(socket, nextLocation, activeRideIdRef.current).catch(() => undefined);
+      },
+    );
     setOnline(true);
+    await loadRides();
   }
 
   return (
@@ -82,6 +112,18 @@ export function DriverShellScreen({ navigation }: Props) {
       <BottomTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
     </SafeAreaView>
   );
+}
+
+function emitPosition(socket: NonNullable<ReturnType<typeof getGpsSocket>>, location: Location.LocationObject, rideId?: number): Promise<void> {
+  return new Promise((resolve) => {
+    socket.emit('driver:position', {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      heading: location.coords.heading,
+      speed: location.coords.speed,
+      rideId,
+    }, () => resolve());
+  });
 }
 
 function DriverHome({

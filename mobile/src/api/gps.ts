@@ -4,6 +4,16 @@ const gpsUrl = process.env.EXPO_PUBLIC_GPS_URL || 'http://localhost:8080';
 
 let socket: Socket | undefined;
 
+export type DriverPosition = {
+  driverId: string;
+  latitude: number;
+  longitude: number;
+  heading?: number;
+  speed?: number;
+  recordedAt: string;
+  rideId?: number;
+};
+
 export function connectGps(accessToken: string): Socket {
   socket = io(gpsUrl, {
     transports: ['websocket'],
@@ -20,4 +30,3 @@ export function disconnectGps() {
   socket?.disconnect();
   socket = undefined;
 }
-

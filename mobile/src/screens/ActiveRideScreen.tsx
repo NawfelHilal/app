@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ride } from '../api/client';
+import { DriverPosition, getGpsSocket } from '../api/gps';
 import { AppButton } from '../components/AppButton';
-import { MapCanvas } from '../components/MapCanvas';
+import { MapCanvas, MapCoordinate } from '../components/MapCanvas';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { useAuthStore } from '../store/auth';
 import { useRideStore } from '../store/rides';
@@ -16,6 +17,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'ActiveRide'>;
 
 export function ActiveRideScreen({ navigation, route }: Props) {
   const [submitting, setSubmitting] = useState(false);
+  const [driverCoordinate, setDriverCoordinate] = useState<MapCoordinate>();
   const ride = useRideStore((state) => state.rides.find((item) => item.id === route.params.rideId));
   const plan = useRideStore((state) => state.currentPlan);
   const role = useAuthStore((state) => state.role);
@@ -29,6 +31,26 @@ export function ActiveRideScreen({ navigation, route }: Props) {
     }, 3000);
     return () => clearInterval(timer);
   }, [refreshRide, route.params.rideId]);
+
+  useEffect(() => {
+    const socket = getGpsSocket();
+    if (!socket) {
+      return undefined;
+    }
+    const joinRide = () => socket.emit('ride:join', { rideId: route.params.rideId });
+    const updatePosition = (position: DriverPosition) => {
+      if (position.rideId === route.params.rideId) {
+        setDriverCoordinate({ latitude: position.latitude, longitude: position.longitude });
+      }
+    };
+    joinRide();
+    socket.on('connect', joinRide);
+    socket.on('driver:position:updated', updatePosition);
+    return () => {
+      socket.off('connect', joinRide);
+      socket.off('driver:position:updated', updatePosition);
+    };
+  }, [route.params.rideId]);
 
   if (!ride) {
     return (
@@ -45,7 +67,7 @@ export function ActiveRideScreen({ navigation, route }: Props) {
         <Pressable onPress={() => navigation.goBack()} style={styles.backButton}><Feather name="arrow-left" size={22} color={colors.ink} /></Pressable>
         <Text style={styles.headerTitle}>{statusLabel(ride.status)}</Text>
       </View>
-      <MapCanvas ride={ride} />
+      <MapCanvas ride={ride} driverCoordinate={driverCoordinate} />
       <View style={styles.sheet}>
         <View style={styles.driverRow}>
           <View style={styles.carBadge}><Feather name="navigation" size={24} color={colors.surface} /></View>
