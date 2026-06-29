@@ -10,7 +10,7 @@ export type AuthenticatedUser = {
 @Injectable()
 export class SocketAuthService {
   authenticate(socket: Socket): AuthenticatedUser {
-    const token = this.extractToken(socket);
+    const token = this.getToken(socket);
     const secret = process.env.GPS_JWT_SECRET || process.env.JWT_SIGNING_KEY;
 
     if (!token || !secret) {
@@ -28,6 +28,10 @@ export class SocketAuthService {
     return { id, role };
   }
 
+  getToken(socket: Socket): string | undefined {
+    return this.extractToken(socket);
+  }
+
   private extractToken(socket: Socket): string | undefined {
     const authToken = socket.handshake.auth?.token;
     if (typeof authToken === 'string') {
@@ -42,4 +46,3 @@ export class SocketAuthService {
     return undefined;
   }
 }
-
