@@ -1,0 +1,38 @@
+import axios from 'axios';
+import { useAuthStore } from '../store/auth';
+
+export const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+
+export const api = axios.create({
+  baseURL: apiUrl,
+  timeout: 10000,
+});
+
+api.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().accessToken;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export type UserRole = 'PASSENGER' | 'DRIVER' | 'ADMIN';
+
+export type Ride = {
+  id: number;
+  status: 'REQUESTED' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED';
+  pickup_label: string;
+  pickup_latitude?: string;
+  pickup_longitude?: string;
+  dropoff_label: string;
+  dropoff_latitude?: string;
+  dropoff_longitude?: string;
+  distance_km?: string;
+  duration_minutes?: number;
+  estimated_fare_cents: number;
+  final_fare_cents?: number | null;
+  commission_cents: number;
+  driver_earnings_cents: number;
+  payment_status?: 'REQUIRES_PAYMENT_METHOD' | 'REQUIRES_CONFIRMATION' | 'SUCCEEDED' | 'FAILED' | null;
+  requested_at?: string;
+};

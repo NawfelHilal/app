@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "FleetPro",
+    "slug": "fleetpro",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "fleetpro",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#111827"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.nawfel06.fleetpro"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "FleetPro utilise votre position pour afficher le chauffeur et le trajet."
+        }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "",
+          "enableGooglePay": false
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:8090/api/v1",
+      "gpsUrl": "http://localhost:8090"
+    }
+  }
+}
