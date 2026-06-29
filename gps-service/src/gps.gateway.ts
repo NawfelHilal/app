@@ -101,7 +101,8 @@ export class GpsGateway implements OnGatewayConnection {
     if (!isValidCoordinate(payload?.latitude, payload?.longitude)) {
       return { ok: false, error: 'Invalid GPS coordinates.' };
     }
-    const drivers = await this.store.findNearby(payload.latitude, payload.longitude, payload.radiusKm || 5);
+    const radiusKm = Math.min(Math.max(Number(payload.radiusKm) || 5, 0.1), 25);
+    const drivers = await this.store.findNearby(payload.latitude, payload.longitude, radiusKm);
     return { ok: true, drivers };
   }
 }

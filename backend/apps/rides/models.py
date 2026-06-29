@@ -47,6 +47,8 @@ class Ride(models.Model):
     dropoff_label = models.CharField(max_length=255)
     dropoff_latitude = models.DecimalField(max_digits=9, decimal_places=6)
     dropoff_longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    passenger_note = models.CharField(max_length=500, blank=True)
+    cancellation_reason = models.CharField(max_length=255, blank=True)
     distance_km = models.DecimalField(max_digits=7, decimal_places=2)
     duration_minutes = models.PositiveIntegerField()
     estimated_fare_cents = models.PositiveIntegerField()
@@ -81,4 +83,3 @@ class RideStatusEvent(models.Model):
 
     class Meta:
         ordering = ["created_at"]
-

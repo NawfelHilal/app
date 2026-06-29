@@ -10,6 +10,7 @@ export type RideDraft = {
   dropoff_longitude: number;
   distance_km: string;
   duration_minutes: number;
+  passenger_note?: string;
 };
 
 export type RidePlan = RideDraft & {
@@ -29,7 +30,7 @@ type RideState = {
   setCurrentPlan: (plan: RidePlan) => void;
   requestRide: (draft: RideDraft) => Promise<Ride>;
   createPaymentIntent: (rideId: number) => Promise<string>;
-  cancelRide: (rideId: number) => Promise<Ride>;
+  cancelRide: (rideId: number, reason?: string) => Promise<Ride>;
   acceptRide: (rideId: number) => Promise<Ride>;
   startRide: (rideId: number) => Promise<Ride>;
   completeRide: (rideId: number) => Promise<Ride>;
@@ -74,8 +75,8 @@ export const useRideStore = create<RideState>((set, get) => ({
     const response = await api.post('/payments/create-intent/', { ride_id: rideId });
     return response.data.client_secret as string;
   },
-  cancelRide: async (rideId) => {
-    const response = await api.post(`/rides/${rideId}/cancel/`);
+  cancelRide: async (rideId, reason) => {
+    const response = await api.post(`/rides/${rideId}/cancel/`, { reason });
     const ride = response.data as Ride;
     set({ rides: replaceRide(get().rides, ride) });
     return ride;

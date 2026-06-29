@@ -55,6 +55,7 @@ export function RideComposerScreen({ navigation }: Props) {
         dropoff_longitude: plan.dropoff_longitude,
         distance_km: plan.distance_km,
         duration_minutes: plan.duration_minutes,
+        passenger_note: note,
       });
       const clientSecret = await createPaymentIntent(ride.id);
       const initialization = await initPaymentSheet({

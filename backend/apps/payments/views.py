@@ -27,6 +27,8 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = CreatePaymentIntentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         ride = get_object_or_404(Ride, id=serializer.validated_data["ride_id"], passenger=request.user)
+        if ride.status != Ride.Status.REQUESTED:
+            return Response({"detail": "Payment can only be prepared for a requested ride."}, status=status.HTTP_409_CONFLICT)
         payment = StripePaymentGateway().create_payment_intent(ride)
         return Response(
             {"payment": PaymentSerializer(payment).data, "client_secret": payment.client_secret},
@@ -35,6 +37,8 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="simulate-intent")
     def simulate_intent(self, request):
+        if not settings.ENABLE_DEMO_SIMULATION:
+            return Response({"detail": "Demo simulation is disabled."}, status=status.HTTP_404_NOT_FOUND)
         serializer = CreatePaymentIntentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         ride = get_object_or_404(Ride, id=serializer.validated_data["ride_id"], passenger=request.user)

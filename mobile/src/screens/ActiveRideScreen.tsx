@@ -21,7 +21,7 @@ export function ActiveRideScreen({ navigation, route }: Props) {
   const ride = useRideStore((state) => state.rides.find((item) => item.id === route.params.rideId));
   const plan = useRideStore((state) => state.currentPlan);
   const role = useAuthStore((state) => state.role);
-  const { acceptRide, startRide, completeRide, refreshRide, simulateRide } = useRideStore();
+  const { acceptRide, startRide, completeRide, cancelRide, refreshRide, simulateRide } = useRideStore();
   const payment = paymentStatusDetail(ride?.payment_status, ride?.status);
 
   useEffect(() => {
@@ -132,6 +132,7 @@ export function ActiveRideScreen({ navigation, route }: Props) {
             status={ride.status}
             submitting={submitting}
             onSimulate={() => runAction(() => simulateRide(ride.id), setSubmitting)}
+            onCancel={() => runAction(() => cancelRide(ride.id, 'Annulée depuis l’application'), setSubmitting)}
           />
         )}
       </View>
@@ -216,10 +217,12 @@ function PassengerSimulationHint({
   status,
   submitting,
   onSimulate,
+  onCancel,
 }: {
   status: string;
   submitting: boolean;
   onSimulate: () => void;
+  onCancel: () => void;
 }) {
   const text = {
     REQUESTED: 'En attente d un chauffeur.',
@@ -236,11 +239,10 @@ function PassengerSimulationHint({
         <Text style={styles.hintText}>{text}</Text>
       </View>
       {status !== 'COMPLETED' && status !== 'CANCELED' ? (
-        <AppButton
-          label={submitting ? 'Simulation...' : simulationButtonLabel(status)}
-          onPress={onSimulate}
-          disabled={submitting}
-        />
+        <>
+          {process.env.EXPO_PUBLIC_ENABLE_DEMO_SIMULATION === 'true' ? <AppButton label={submitting ? 'Simulation...' : simulationButtonLabel(status)} onPress={onSimulate} disabled={submitting} /> : null}
+          <AppButton label="Annuler la course" onPress={onCancel} disabled={submitting} variant="secondary" />
+        </>
       ) : null}
     </View>
   );

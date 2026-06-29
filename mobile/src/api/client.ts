@@ -38,6 +38,8 @@ export type Ride = {
   dropoff_label: string;
   dropoff_latitude?: string;
   dropoff_longitude?: string;
+  passenger_note?: string;
+  cancellation_reason?: string;
   distance_km?: string;
   duration_minutes?: number;
   estimated_fare_cents: number;

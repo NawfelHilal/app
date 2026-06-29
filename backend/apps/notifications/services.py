@@ -48,9 +48,12 @@ class RideNotificationService:
         for recipient in recipients:
             if recipient.id == actor.id and status != "COMPLETED":
                 continue
-            self.gateway.send_to_user(
-                recipient,
-                message[0],
-                message[1],
-                {"ride_id": str(ride.id), "status": status},
-            )
+            try:
+                self.gateway.send_to_user(
+                    recipient,
+                    message[0],
+                    message[1],
+                    {"ride_id": str(ride.id), "status": status},
+                )
+            except Exception:
+                continue

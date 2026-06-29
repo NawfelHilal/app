@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "apps.accounts",
     "apps.rides",
     "apps.payments",
@@ -108,12 +109,19 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {"anon": "30/min", "user": "300/min"},
 }
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "SIGNING_KEY": env("JWT_SIGNING_KEY", SECRET_KEY),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
 FLEETPRO_COMMISSION_RATE = 0.15
@@ -122,3 +130,13 @@ STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET")
 FIREBASE_CREDENTIALS_PATH = env("FIREBASE_CREDENTIALS_PATH")
 REDIS_URL = env("REDIS_URL", "redis://redis:6379/0")
 GPS_MATCH_RADIUS_KM = float(env("GPS_MATCH_RADIUS_KM", "10"))
+ENABLE_DEMO_SIMULATION = env_bool("ENABLE_DEMO_SIMULATION", DEBUG)
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from rest_framework import mixins, permissions, status, viewsets
@@ -7,6 +8,7 @@ from rest_framework.response import Response
 
 from .models import DriverProfile, Ride, Vehicle
 from .matching import RideMatcher
+from .permissions import IsDriverOrStaff
 from .serializers import DriverProfileSerializer, FareQuoteResponseSerializer, FareQuoteSerializer, RideSerializer, VehicleSerializer
 from .services import RideLifecycle
 
@@ -81,11 +83,14 @@ class RideViewSet(
             return Response({"detail": "You cannot cancel this ride."}, status=status.HTTP_403_FORBIDDEN)
         if ride.status in {Ride.Status.COMPLETED, Ride.Status.CANCELED}:
             return Response({"detail": "Ride is already closed."}, status=status.HTTP_409_CONFLICT)
+        ride.cancellation_reason = str(request.data.get("reason", ""))[:255]
         ride = RideLifecycle().record(ride, Ride.Status.CANCELED, request.user)
         return Response(self.get_serializer(ride).data)
 
     @action(detail=True, methods=["post"])
     def simulate(self, request, pk=None):
+        if not settings.ENABLE_DEMO_SIMULATION:
+            return Response({"detail": "Demo simulation is disabled."}, status=status.HTTP_404_NOT_FOUND)
         ride = self.get_object()
         if ride.passenger_id != request.user.id:
             return Response({"detail": "Only the passenger can run demo simulation."}, status=status.HTTP_403_FORBIDDEN)
@@ -115,7 +120,7 @@ class DriverProfileViewSet(
     viewsets.GenericViewSet,
 ):
     serializer_class = DriverProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsDriverOrStaff]
 
     def get_queryset(self):
         if self.request.user.is_staff:
@@ -134,7 +139,7 @@ class VehicleViewSet(
     viewsets.GenericViewSet,
 ):
     serializer_class = VehicleSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsDriverOrStaff]
 
     def get_queryset(self):
         if self.request.user.is_staff:
