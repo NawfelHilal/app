@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gps-service
+  namespace: fleetpro
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gps-service
+  template:
+    metadata:
+      labels:
+        app: gps-service
+    spec:
+      containers:
+        - name: gps-service
+          image: fleetpro/gps-service:latest
+          ports:
+            - containerPort: 3001
+          envFrom:
+            - secretRef:
+                name: fleetpro-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gps-service
+  namespace: fleetpro
+spec:
+  selector:
+    app: gps-service
+  ports:
+    - port: 3001
+      targetPort: 3001
+
