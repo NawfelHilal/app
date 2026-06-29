@@ -1,12 +1,16 @@
 import { useState } from 'react';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AxiosError } from 'axios';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiUrl } from '../api/client';
 import { useAuthStore } from '../store/auth';
 import { colors } from '../theme/colors';
+import { RootStackParamList } from '../navigation/RootNavigator';
 
-export function LoginScreen() {
+type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
+
+export function LoginScreen({ navigation }: Props) {
   const [username, setUsername] = useState('passenger');
   const [password, setPassword] = useState('password123');
   const [loading, setLoading] = useState(false);
@@ -37,6 +41,7 @@ export function LoginScreen() {
       <Pressable onPress={submit} disabled={loading} style={styles.button}>
         <Text style={styles.buttonText}>{loading ? 'Connexion...' : 'Se connecter'}</Text>
       </Pressable>
+      <Pressable onPress={() => navigation.navigate('Register')}><Text style={styles.register}>Créer un compte</Text></Pressable>
       <Text style={styles.helper}>passenger / password123 ou driver / password123</Text>
     </SafeAreaView>
   );
@@ -52,4 +57,5 @@ const styles = StyleSheet.create({
   button: { height: 52, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.ink },
   buttonText: { color: 'white', fontWeight: '700' },
   helper: { color: colors.muted, textAlign: 'center', marginTop: 8 },
+  register: { color: colors.ink, textAlign: 'center', fontWeight: '800' },
 });

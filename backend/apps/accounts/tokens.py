@@ -8,9 +8,9 @@ class FleetProTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         token["role"] = user.role
         token["email"] = user.email
+        token["username"] = user.username
         return token
 
 
 class FleetProTokenObtainPairView(TokenObtainPairView):
     serializer_class = FleetProTokenObtainPairSerializer
-

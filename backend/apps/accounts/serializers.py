@@ -8,7 +8,17 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "email", "first_name", "last_name", "role", "phone_number"]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "username", "email", "role"]
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_current_password(self, password):
+        if not self.context["request"].user.check_password(password):
+            raise serializers.ValidationError("Current password is incorrect.")
+        return password
 
 
 class RegisterSerializer(serializers.ModelSerializer):

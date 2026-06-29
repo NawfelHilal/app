@@ -7,11 +7,13 @@ from apps.accounts.tokens import FleetProTokenObtainPairView
 from apps.accounts.views import AccountViewSet
 from apps.notifications.views import DeviceTokenViewSet
 from apps.payments.views import PaymentViewSet
-from apps.rides.views import RideViewSet
+from apps.rides.views import DriverProfileViewSet, RideViewSet, VehicleViewSet
 
 router = DefaultRouter()
 router.register("accounts", AccountViewSet, basename="accounts")
 router.register("rides", RideViewSet, basename="rides")
+router.register("driver-profiles", DriverProfileViewSet, basename="driver-profiles")
+router.register("vehicles", VehicleViewSet, basename="vehicles")
 router.register("payments", PaymentViewSet, basename="payments")
 router.register("notifications/devices", DeviceTokenViewSet, basename="device-tokens")
 

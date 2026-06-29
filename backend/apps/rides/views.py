@@ -5,9 +5,9 @@ from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Ride
+from .models import DriverProfile, Ride, Vehicle
 from .matching import RideMatcher
-from .serializers import FareQuoteResponseSerializer, FareQuoteSerializer, RideSerializer
+from .serializers import DriverProfileSerializer, FareQuoteResponseSerializer, FareQuoteSerializer, RideSerializer, VehicleSerializer
 from .services import RideLifecycle
 
 
@@ -105,3 +105,41 @@ class RideViewSet(
         actor = demo_driver if next_status == Ride.Status.ACCEPTED else ride.driver or demo_driver
         ride = RideLifecycle().record(ride, next_status, actor)
         return Response(self.get_serializer(ride).data)
+
+
+class DriverProfileViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    serializer_class = DriverProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return DriverProfile.objects.all()
+        return DriverProfile.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class VehicleViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    serializer_class = VehicleSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return Vehicle.objects.all()
+        return Vehicle.objects.filter(driver=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(driver=self.request.user)

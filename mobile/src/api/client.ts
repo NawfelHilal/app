@@ -16,6 +16,17 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use(undefined, async (error) => {
+  const request = error.config as (typeof error.config & { _retry?: boolean });
+  if (error.response?.status !== 401 || request?._retry || request?.url?.includes('/auth/token/refresh/')) {
+    return Promise.reject(error);
+  }
+  request._retry = true;
+  const accessToken = await useAuthStore.getState().refreshAccessToken();
+  request.headers.Authorization = `Bearer ${accessToken}`;
+  return api(request);
+});
+
 export type UserRole = 'PASSENGER' | 'DRIVER' | 'ADMIN';
 
 export type Ride = {
