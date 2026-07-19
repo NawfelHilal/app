@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: core-api-migrate
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: scaleway-registry
+      containers:
+        - name: migrate
+          image: fleetpro-backend
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: fleetpro-config
+            - secretRef:
+                name: fleetpro-secrets
+          command:
+            - sh
+            - -c
+            - python manage.py migrate && python manage.py collectstatic --noinput
