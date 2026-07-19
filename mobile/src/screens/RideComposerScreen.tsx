@@ -1,7 +1,8 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useStripe } from '@stripe/stripe-react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { useMemo, useState } from 'react';
+import * as Location from 'expo-location';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '../components/AppButton';
@@ -19,13 +20,25 @@ export function RideComposerScreen({ navigation }: Props) {
   const [selectedPlaceId, setSelectedPlaceId] = useState(savedPlaces[1].id);
   const [selectedServiceId, setSelectedServiceId] = useState(rideOptions[0].id);
   const [note, setNote] = useState('');
+  const [pickup, setPickup] = useState({ latitude: 48.8566, longitude: 2.3522 });
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
-  const { setCurrentPlan, requestRide, createPaymentIntent, cancelRide } = useRideStore();
+  const { setCurrentPlan, requestRide, createPaymentIntent, simulatePaymentIntent, cancelRide } = useRideStore();
 
   const selectedPlace = savedPlaces.find((place) => place.id === selectedPlaceId) || savedPlaces[1];
   const selectedService = rideOptions.find((option) => option.id === selectedServiceId) || rideOptions[0];
   const baseFare = 350 + Number(selectedPlace.distanceKm) * 145 + selectedPlace.durationMinutes * 35;
   const fare = Math.round(Math.max(baseFare, 850) * selectedService.multiplier);
+
+  useEffect(() => {
+    Location.requestForegroundPermissionsAsync()
+      .then(({ status }) => status === 'granted' ? Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }) : undefined)
+      .then((location) => {
+        if (location) {
+          setPickup({ latitude: location.coords.latitude, longitude: location.coords.longitude });
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   const plan = useMemo(() => ({
     dropoffId: selectedPlace.id,
@@ -33,15 +46,15 @@ export function RideComposerScreen({ navigation }: Props) {
     serviceName: selectedService.name,
     eta: selectedService.eta,
     pickup_label: 'Position actuelle',
-    pickup_latitude: 48.8566,
-    pickup_longitude: 2.3522,
+    pickup_latitude: pickup.latitude,
+    pickup_longitude: pickup.longitude,
     dropoff_label: selectedPlace.label,
     dropoff_latitude: selectedPlace.latitude,
     dropoff_longitude: selectedPlace.longitude,
     distance_km: selectedPlace.distanceKm,
     duration_minutes: selectedPlace.durationMinutes,
     estimatedFareCents: fare,
-  }), [fare, selectedPlace, selectedService]);
+  }), [fare, pickup.latitude, pickup.longitude, selectedPlace, selectedService]);
 
   async function confirmRide() {
     try {
@@ -57,24 +70,31 @@ export function RideComposerScreen({ navigation }: Props) {
         duration_minutes: plan.duration_minutes,
         passenger_note: note,
       });
-      const clientSecret = await createPaymentIntent(ride.id);
-      const initialization = await initPaymentSheet({
-        merchantDisplayName: 'FleetPro',
-        paymentIntentClientSecret: clientSecret,
-        returnURL: 'fleetpro://stripe-redirect',
-      });
-      if (initialization.error) {
-        await cancelRide(ride.id);
-        throw new Error(initialization.error.message);
-      }
-      const payment = await presentPaymentSheet();
-      if (payment.error) {
-        await cancelRide(ride.id);
-        throw new Error(payment.error.message);
+      const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+      const simulatedPayment = process.env.EXPO_PUBLIC_USE_SIMULATED_PAYMENT === 'true' || !publishableKey.startsWith('pk_');
+      if (simulatedPayment) {
+        await simulatePaymentIntent(ride.id);
+      } else {
+        const clientSecret = await createPaymentIntent(ride.id);
+        const initialization = await initPaymentSheet({
+          merchantDisplayName: 'FleetPro',
+          paymentIntentClientSecret: clientSecret,
+          returnURL: 'fleetpro://stripe-redirect',
+        });
+        if (initialization.error) {
+          await cancelRide(ride.id);
+          throw new Error(initialization.error.message);
+        }
+        const payment = await presentPaymentSheet();
+        if (payment.error) {
+          await cancelRide(ride.id);
+          throw new Error(payment.error.message);
+        }
       }
       navigation.replace('ActiveRide', { rideId: ride.id });
     } catch (error) {
-      Alert.alert('Course impossible', 'La demande de course a echoue.');
+      const message = error instanceof Error ? error.message : 'La demande de course a échoué.';
+      Alert.alert('Course impossible', message);
     }
   }
 

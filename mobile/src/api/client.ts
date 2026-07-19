@@ -18,7 +18,7 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(undefined, async (error) => {
   const request = error.config as (typeof error.config & { _retry?: boolean });
-  if (error.response?.status !== 401 || request?._retry || request?.url?.includes('/auth/token/refresh/')) {
+  if (error.response?.status !== 401 || request?._retry || request?.url?.includes('/auth/token/')) {
     return Promise.reject(error);
   }
   request._retry = true;

@@ -28,10 +28,11 @@ class Command(BaseCommand):
                     "role": payload["role"],
                 },
             )
+            user.email = payload["email"]
+            user.role = payload["role"]
+            user.set_password("password123")
+            user.save(update_fields=["email", "role", "password"])
             if created:
-                user.set_password("password123")
-                user.save(update_fields=["password"])
                 self.stdout.write(self.style.SUCCESS(f"Created {user.username}"))
             else:
-                self.stdout.write(f"{user.username} already exists")
-
+                self.stdout.write(f"Reset demo account {user.username}")

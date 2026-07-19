@@ -16,10 +16,10 @@ export function LoginScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const login = useAuthStore((state) => state.login);
 
-  async function submit() {
+  async function submit(credentials?: { username: string; password: string }) {
     setLoading(true);
     try {
-      await login(username, password);
+      await login((credentials?.username || username).trim(), credentials?.password || password);
     } catch (error) {
       const axiosError = error as AxiosError;
       const detail = axiosError.response
@@ -38,9 +38,17 @@ export function LoginScreen({ navigation }: Props) {
       <Text style={styles.subtitle}>Courses VTC ethiques, commission fixe et experience chauffeur claire.</Text>
       <TextInput value={username} onChangeText={setUsername} autoCapitalize="none" placeholder="Identifiant" placeholderTextColor={colors.muted} style={styles.input} />
       <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder="Mot de passe" placeholderTextColor={colors.muted} style={styles.input} />
-      <Pressable onPress={submit} disabled={loading} style={styles.button}>
+      <Pressable onPress={() => submit()} disabled={loading} style={styles.button}>
         <Text style={styles.buttonText}>{loading ? 'Connexion...' : 'Se connecter'}</Text>
       </Pressable>
+      <View style={styles.demoRow}>
+        <Pressable onPress={() => submit({ username: 'passenger', password: 'password123' })} disabled={loading} style={styles.demoButton}>
+          <Text style={styles.demoText}>Passager démo</Text>
+        </Pressable>
+        <Pressable onPress={() => submit({ username: 'driver', password: 'password123' })} disabled={loading} style={styles.demoButton}>
+          <Text style={styles.demoText}>Chauffeur démo</Text>
+        </Pressable>
+      </View>
       <Pressable onPress={() => navigation.navigate('Register')}><Text style={styles.register}>Créer un compte</Text></Pressable>
       <Text style={styles.helper}>passenger / password123 ou driver / password123</Text>
     </SafeAreaView>
@@ -56,6 +64,9 @@ const styles = StyleSheet.create({
   input: { height: 52, borderWidth: 1, borderColor: colors.line, borderRadius: 8, paddingHorizontal: 14, backgroundColor: colors.surface, color: colors.ink },
   button: { height: 52, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.ink },
   buttonText: { color: 'white', fontWeight: '700' },
+  demoRow: { flexDirection: 'row', gap: 10 },
+  demoButton: { flex: 1, minHeight: 44, borderRadius: 8, backgroundColor: colors.softAccent, alignItems: 'center', justifyContent: 'center' },
+  demoText: { color: colors.ink, fontWeight: '800' },
   helper: { color: colors.muted, textAlign: 'center', marginTop: 8 },
   register: { color: colors.ink, textAlign: 'center', fontWeight: '800' },
 });
