@@ -31,6 +31,7 @@ jobs:
         working-directory: backend
         env:
           DJANGO_SECRET_KEY: ci
+          JWT_SIGNING_KEY: fleetpro-ci-jwt-signing-key-at-least-32-characters
           POSTGRES_DB: fleetpro
           POSTGRES_USER: fleetpro
           POSTGRES_PASSWORD: fleetpro
