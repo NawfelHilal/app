@@ -80,3 +80,4 @@ Comptes demo crees par `seed_demo`:
 Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 Voir aussi [docs/API.md](docs/API.md) pour les endpoints REST et Socket.io.
 En cas de probleme Docker, npm ou Expo, voir [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+Pour heberger sur Scaleway avec Docker Compose ou Kubernetes Kapsule, voir [DEPLOY_SCALEWAY.md](DEPLOY_SCALEWAY.md).

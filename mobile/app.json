@@ -40,7 +40,10 @@
     ],
     "extra": {
       "apiUrl": "http://localhost:8090/api/v1",
-      "gpsUrl": "http://localhost:8090"
+      "gpsUrl": "http://localhost:8090",
+      "eas": {
+        "projectId": "ad8939bb-7da6-43f5-a6dd-1f5156afdcfd"
+      }
     }
   }
 }
