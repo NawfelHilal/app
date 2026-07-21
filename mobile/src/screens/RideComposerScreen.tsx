@@ -45,6 +45,7 @@ export function RideComposerScreen({ navigation }: Props) {
     serviceId: selectedService.id,
     serviceName: selectedService.name,
     eta: selectedService.eta,
+    service_type: selectedService.id as 'STANDARD' | 'FLEETHER' | 'FLEET_PMR',
     pickup_label: 'Position actuelle',
     pickup_latitude: pickup.latitude,
     pickup_longitude: pickup.longitude,
@@ -69,6 +70,7 @@ export function RideComposerScreen({ navigation }: Props) {
         distance_km: plan.distance_km,
         duration_minutes: plan.duration_minutes,
         passenger_note: note,
+        service_type: plan.service_type,
       });
       const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
       const simulatedPayment = process.env.EXPO_PUBLIC_USE_SIMULATED_PAYMENT === 'true' || !publishableKey.startsWith('pk_');
@@ -143,6 +145,7 @@ export function RideComposerScreen({ navigation }: Props) {
               <View style={styles.optionText}>
                 <Text style={styles.optionTitle}>{option.name}</Text>
                 <Text style={styles.optionMeta}>{option.seats} - arrive dans {option.eta}</Text>
+                <Text style={styles.optionDescription}>{option.description}</Text>
               </View>
               <Text style={styles.fare}>{formatEuro(optionFare)}</Text>
             </Pressable>
@@ -174,6 +177,7 @@ const styles = StyleSheet.create({
   optionText: { flex: 1 },
   optionTitle: { color: colors.ink, fontWeight: '900', fontSize: 16 },
   optionMeta: { color: colors.muted, marginTop: 3 },
+  optionDescription: { color: colors.muted, marginTop: 4, fontSize: 12, lineHeight: 17 },
   carIcon: { width: 46, height: 34, borderRadius: 8, backgroundColor: colors.softAccent, alignItems: 'center', justifyContent: 'center' },
   carEmoji: { color: colors.ink, fontWeight: '900', fontSize: 12 },
   fare: { color: colors.ink, fontWeight: '900' },
