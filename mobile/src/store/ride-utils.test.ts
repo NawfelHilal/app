@@ -5,6 +5,7 @@ function ride(id: number, status: Ride['status'] = 'REQUESTED'): Ride {
   return {
     id,
     status,
+    service_type: 'STANDARD',
     pickup_label: 'Paris',
     pickup_latitude: '48.856600',
     pickup_longitude: '2.352200',

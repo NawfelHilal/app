@@ -3,13 +3,40 @@ from django.db import models
 
 
 class DriverProfile(models.Model):
+    class Gender(models.TextChoices):
+        FEMALE = "FEMALE", "Female"
+        MALE = "MALE", "Male"
+        OTHER = "OTHER", "Other"
+        UNDISCLOSED = "UNDISCLOSED", "Undisclosed"
+
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="driver_profile")
     license_number = models.CharField(max_length=64, unique=True)
+    professional_card_number = models.CharField(max_length=64, blank=True)
+    company_name = models.CharField(max_length=120, blank=True)
+    siret_number = models.CharField(max_length=32, blank=True)
+    insurance_policy_number = models.CharField(max_length=64, blank=True)
+    gender = models.CharField(max_length=20, choices=Gender.choices, default=Gender.UNDISCLOSED)
     verified_at = models.DateTimeField(null=True, blank=True)
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=5)
 
     def __str__(self) -> str:
         return f"DriverProfile({self.user_id})"
+
+    @property
+    def is_fleether_eligible(self) -> bool:
+        return self.gender == self.Gender.FEMALE
+
+    @property
+    def is_professional_profile_complete(self) -> bool:
+        return all(
+            [
+                self.license_number,
+                self.professional_card_number,
+                self.company_name,
+                self.siret_number,
+                self.insurance_policy_number,
+            ]
+        )
 
 
 class Vehicle(models.Model):
@@ -19,6 +46,8 @@ class Vehicle(models.Model):
     model = models.CharField(max_length=64)
     color = models.CharField(max_length=32)
     seats = models.PositiveSmallIntegerField(default=4)
+    is_pmr_adapted = models.BooleanField(default=False)
+    pmr_certification_reference = models.CharField(max_length=64, blank=True)
 
     def __str__(self) -> str:
         return f"{self.plate_number} - {self.brand} {self.model}"
@@ -32,6 +61,11 @@ class Ride(models.Model):
         COMPLETED = "COMPLETED", "Completed"
         CANCELED = "CANCELED", "Canceled"
 
+    class ServiceType(models.TextChoices):
+        STANDARD = "STANDARD", "Standard"
+        FLEETHER = "FLEETHER", "FleetHer"
+        FLEET_PMR = "FLEET_PMR", "Fleet PMR"
+
     passenger = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="passenger_rides")
     driver = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -41,6 +75,7 @@ class Ride(models.Model):
         blank=True,
     )
     status = models.CharField(max_length=24, choices=Status.choices, default=Status.REQUESTED)
+    service_type = models.CharField(max_length=24, choices=ServiceType.choices, default=ServiceType.STANDARD)
     pickup_label = models.CharField(max_length=255)
     pickup_latitude = models.DecimalField(max_digits=9, decimal_places=6)
     pickup_longitude = models.DecimalField(max_digits=9, decimal_places=6)

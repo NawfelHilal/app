@@ -87,7 +87,63 @@ class RideApiTests(APITestCase):
         self.assertEqual(ride.driver_id, driver.id)
         self.assertEqual(ride.status, Ride.Status.ACCEPTED)
         self.assertIn("start", accepted.data["_links"])
-        self.assertEqual(conflict.status_code, 409)
+        self.assertEqual(conflict.status_code, 404)
+
+    def test_fleether_and_pmr_rides_are_visible_only_to_eligible_drivers(self):
+        passenger = create_user("service-passenger")
+        female_driver = create_user("female-driver", role="DRIVER")
+        male_driver = create_user("male-driver", role="DRIVER")
+        pmr_driver = create_user("pmr-driver", role="DRIVER")
+        DriverProfile.objects.create(
+            user=female_driver,
+            license_number="FEMALE-LICENSE",
+            gender=DriverProfile.Gender.FEMALE,
+        )
+        DriverProfile.objects.create(
+            user=male_driver,
+            license_number="MALE-LICENSE",
+            gender=DriverProfile.Gender.MALE,
+        )
+        DriverProfile.objects.create(
+            user=pmr_driver,
+            license_number="PMR-LICENSE",
+            gender=DriverProfile.Gender.MALE,
+        )
+        Vehicle.objects.create(
+            driver=pmr_driver,
+            plate_number="PMR-1",
+            brand="Peugeot",
+            model="Rifter",
+            color="Blue",
+            is_pmr_adapted=True,
+            pmr_certification_reference="PMR-CERT",
+        )
+        fleether_ride = create_ride(passenger, service_type=Ride.ServiceType.FLEETHER)
+        pmr_ride = create_ride(passenger, service_type=Ride.ServiceType.FLEET_PMR)
+
+        with patch("apps.rides.views.RideMatcher.nearby_ride_ids", return_value=[fleether_ride.id, pmr_ride.id]):
+            self.client.force_authenticate(female_driver)
+            female_response = self.client.get("/api/v1/rides/")
+            self.client.force_authenticate(male_driver)
+            male_response = self.client.get("/api/v1/rides/")
+            self.client.force_authenticate(pmr_driver)
+            pmr_response = self.client.get("/api/v1/rides/")
+
+        self.assertEqual([ride["id"] for ride in female_response.data], [fleether_ride.id])
+        self.assertEqual(male_response.data, [])
+        self.assertEqual([ride["id"] for ride in pmr_response.data], [pmr_ride.id])
+
+    def test_ineligible_driver_cannot_accept_special_service(self):
+        passenger = create_user("special-passenger")
+        driver = create_user("special-driver", role="DRIVER")
+        DriverProfile.objects.create(user=driver, license_number="SPECIAL-LICENSE", gender=DriverProfile.Gender.MALE)
+        ride = create_ride(passenger, service_type=Ride.ServiceType.FLEETHER)
+        self.client.force_authenticate(driver)
+
+        with patch("apps.rides.views.RideMatcher.nearby_ride_ids", return_value=[ride.id]):
+            response = self.client.post(f"/api/v1/rides/{ride.id}/accept/", {}, format="json")
+
+        self.assertEqual(response.status_code, 404)
 
     def test_passenger_cannot_accept_ride(self):
         passenger = create_user("accept-not-driver")
@@ -233,6 +289,8 @@ class DriverProfileAndVehicleApiTests(APITestCase):
 
         self.assertEqual(profile_created.status_code, 201)
         self.assertEqual(vehicle_created.status_code, 201)
+        self.assertFalse(profile_created.data["is_fleether_eligible"])
+        self.assertFalse(profile_created.data["is_fleet_pmr_eligible"])
         self.assertEqual(len(profile_list.data), 1)
         self.assertEqual(len(vehicle_list.data), 1)
         self.assertEqual(len(staff_profiles.data), 2)

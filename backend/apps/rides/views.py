@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import DriverProfile, Ride, Vehicle
+from .eligibility import driver_is_eligible_for_service
 from .matching import RideMatcher
 from .permissions import IsDriverOrStaff
 from .serializers import DriverProfileSerializer, FareQuoteResponseSerializer, FareQuoteSerializer, RideSerializer, VehicleSerializer
@@ -29,7 +30,12 @@ class RideViewSet(
         if getattr(user, "is_driver", False):
             requested = Ride.objects.filter(status=Ride.Status.REQUESTED)
             nearby_ids = RideMatcher().nearby_ride_ids(user.id, requested)
-            return Ride.objects.filter(Q(driver=user) | Q(id__in=nearby_ids))
+            eligible_ids = [
+                ride.id
+                for ride in requested.filter(id__in=nearby_ids).prefetch_related("passenger")
+                if driver_is_eligible_for_service(user, ride.service_type)
+            ]
+            return Ride.objects.filter(Q(driver=user) | Q(id__in=eligible_ids))
         return Ride.objects.filter(passenger=user)
 
     def create(self, request, *args, **kwargs):
@@ -53,6 +59,8 @@ class RideViewSet(
             ride = Ride.objects.select_for_update().get(pk=visible_ride.pk)
             if ride.status != Ride.Status.REQUESTED:
                 return Response({"detail": "Ride is not available."}, status=status.HTTP_409_CONFLICT)
+            if not driver_is_eligible_for_service(request.user, ride.service_type):
+                return Response({"detail": "Driver is not eligible for this service."}, status=status.HTTP_403_FORBIDDEN)
             ride = RideLifecycle().record(ride, Ride.Status.ACCEPTED, request.user)
         return Response(self.get_serializer(ride).data)
 

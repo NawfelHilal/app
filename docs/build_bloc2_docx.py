@@ -367,14 +367,15 @@ def build_content() -> list[str]:
     parts.append(page_break())
 
     parts.append(heading(1, "6. Prototype fonctionnel"))
-    parts.append(para("Le prototype couvre les parcours indispensables à une démonstration de plateforme VTC : inscription, connexion, demande de course, paiement, recherche de chauffeur, publication GPS, acceptation, suivi et annulation."))
+    parts.append(para("Le prototype couvre les parcours indispensables à une démonstration de plateforme VTC : inscription, connexion, demande de course, choix Fleet Standard/FleetHer/Fleet PMR, paiement, recherche de chauffeur, publication GPS, acceptation, suivi et annulation."))
     parts.append(table(
         ["Parcours", "Acteur", "Composants mobilisés", "Statut"],
         [
             ["Connexion", "Passager / chauffeur", "Mobile, Django JWT, store Zustand", "Fonctionnel"],
             ["Demande de course", "Passager", "Mobile, `/rides/quote/`, `/rides/`", "Fonctionnel"],
             ["Paiement simulé", "Passager", "Mobile, backend payments", "Fonctionnel pour démo"],
-            ["Recherche chauffeur", "Passager", "Mobile, GPS service, Redis", "Fonctionnel si chauffeur connecté"],
+            ["Choix service", "Passager", "Mobile, API rides", "Standard, FleetHer ou Fleet PMR"],
+            ["Recherche chauffeur", "Passager", "Mobile, GPS service, Redis", "Fonctionnel selon éligibilité chauffeur"],
             ["Acceptation", "Chauffeur", "Mobile driver, backend rides", "Fonctionnel avec compte driver"],
             ["Suivi GPS", "Passager / chauffeur", "Socket.io, Redis, rooms de course", "Prototype fonctionnel"],
         ],
@@ -384,7 +385,7 @@ def build_content() -> list[str]:
     for item in [
         "Le paiement réel Stripe reste en mode test ; un paiement simulé existe pour les démonstrations sans carte.",
         "Les notifications push nécessitent un development build Expo configuré avec Firebase/APNs.",
-        "FleetAccess, FleetHer et SmartPredict sont des axes produit décrits au Bloc 1 mais non finalisés dans le MVP technique.",
+        "FleetHer et Fleet PMR sont intégrés au MVP via des règles d'éligibilité ; SmartPredict reste un axe produit futur.",
         "La disponibilité 99,9 % est un objectif cible ; le MVP Scaleway Instance n'est pas encore une architecture multi-zone."
     ]:
         parts.append(bullet(item))
@@ -415,6 +416,7 @@ def build_content() -> list[str]:
             ["Repository / Store spécialisé", "`RedisGpsStore` encapsule Redis GEO et TTL.", "Remplacement et test plus simples."],
             ["Gateway Pattern", "`PushNotificationGateway` et gateway de paiement simulée/Stripe.", "Dépendances externes découplées."],
             ["API Gateway", "Nginx expose REST et WebSocket derrière un point d'entrée unique.", "Routage, sécurité réseau et future terminaison TLS."],
+            ["HATEOAS", "Les serializers comptes, courses et paiements exposent `_links` avec les transitions possibles.", "API REST niveau 3 plus découvrable."],
             ["Observer / Pub-Sub", "Socket.io diffuse les positions aux salles de course.", "Temps réel sans polling."],
             ["State Store", "Zustand garde l'état auth/rides côté mobile.", "État prévisible et partagé entre écrans."],
         ],

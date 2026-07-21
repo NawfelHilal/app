@@ -1,4 +1,4 @@
-import { api } from '../api/client';
+import { api, Ride } from '../api/client';
 import { useRideStore } from './rides';
 
 jest.mock('../api/client', () => ({
@@ -10,10 +10,11 @@ jest.mock('../api/client', () => ({
 
 const mockedApi = api as jest.Mocked<typeof api>;
 
-function ride(id: number, status = 'REQUESTED') {
+function ride(id: number, status: Ride['status'] = 'REQUESTED'): Ride {
   return {
     id,
     status,
+    service_type: 'STANDARD',
     pickup_label: 'Paris',
     dropoff_label: 'Tour Eiffel',
     estimated_fare_cents: 2500,
@@ -42,6 +43,7 @@ describe('useRideStore', () => {
     mockedApi.post.mockResolvedValue({ data: ride(3) });
     const draft = {
       pickup_label: 'Paris',
+      service_type: 'STANDARD' as const,
       pickup_latitude: 48.8566,
       pickup_longitude: 2.3522,
       dropoff_label: 'Tour Eiffel',
@@ -63,6 +65,7 @@ describe('useRideStore', () => {
     mockedApi.get.mockResolvedValue({ data: ride(7, 'ACCEPTED') });
     const plan = {
       pickup_label: 'Paris',
+      service_type: 'STANDARD' as const,
       pickup_latitude: 48.8566,
       pickup_longitude: 2.3522,
       dropoff_label: 'Tour Eiffel',
@@ -71,8 +74,8 @@ describe('useRideStore', () => {
       distance_km: '10.00',
       duration_minutes: 20,
       dropoffId: 'eiffel',
-      serviceId: 'eco',
-      serviceName: 'Fleet Eco',
+      serviceId: 'STANDARD',
+      serviceName: 'Fleet Standard',
       estimatedFareCents: 2500,
       eta: '3 min',
     };

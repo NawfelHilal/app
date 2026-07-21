@@ -40,25 +40,27 @@ export const savedPlaces: PlaceSuggestion[] = [
 
 export const rideOptions = [
   {
-    id: 'eco',
-    name: 'Fleet Eco',
+    id: 'STANDARD',
+    name: 'Fleet Standard',
     seats: '4 places',
     eta: '3 min',
     multiplier: 1,
+    description: 'Course classique avec chauffeur disponible proche.',
   },
   {
-    id: 'comfort',
-    name: 'Fleet Comfort',
+    id: 'FLEETHER',
+    name: 'FleetHer',
     seats: '4 places',
     eta: '5 min',
-    multiplier: 1.22,
+    multiplier: 1.18,
+    description: 'Service réservé aux chauffeurs femmes éligibles.',
   },
   {
-    id: 'van',
-    name: 'Fleet Van',
-    seats: '6 places',
+    id: 'FLEET_PMR',
+    name: 'Fleet PMR',
+    seats: 'Véhicule adapté',
     eta: '8 min',
-    multiplier: 1.48,
+    multiplier: 1.35,
+    description: 'Service avec véhicule adapté aux personnes à mobilité réduite.',
   },
 ];
-

@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
+from .eligibility import driver_is_eligible_for_service
 from .models import DriverProfile, Ride, Vehicle
 from .services import FareCalculator
 
@@ -10,6 +11,7 @@ from .services import FareCalculator
 class FareQuoteSerializer(serializers.Serializer):
     distance_km = serializers.DecimalField(max_digits=7, decimal_places=2)
     duration_minutes = serializers.IntegerField(min_value=1)
+    service_type = serializers.ChoiceField(choices=Ride.ServiceType.choices, default=Ride.ServiceType.STANDARD)
 
     def validate(self, attrs):
         quote = FareCalculator().quote(attrs["distance_km"], attrs["duration_minutes"])
@@ -38,6 +40,7 @@ class RideSerializer(serializers.ModelSerializer):
             "passenger",
             "driver",
             "status",
+            "service_type",
             "pickup_label",
             "pickup_latitude",
             "pickup_longitude",
@@ -102,7 +105,7 @@ class RideSerializer(serializers.ModelSerializer):
         is_staff = bool(getattr(user, "is_staff", False))
 
         if obj.status == Ride.Status.REQUESTED:
-            if is_driver:
+            if is_driver and driver_is_eligible_for_service(user, obj.service_type):
                 links["accept"] = {"href": uri(f"/api/v1/rides/{obj.id}/accept/"), "method": "POST"}
             if user_id == obj.passenger_id or is_staff:
                 links["cancel"] = {"href": uri(f"/api/v1/rides/{obj.id}/cancel/"), "method": "POST"}
@@ -135,14 +138,45 @@ class RideSerializer(serializers.ModelSerializer):
 
 
 class DriverProfileSerializer(serializers.ModelSerializer):
+    is_fleether_eligible = serializers.BooleanField(read_only=True)
+    is_professional_profile_complete = serializers.BooleanField(read_only=True)
+    is_fleet_pmr_eligible = serializers.SerializerMethodField()
+
     class Meta:
         model = DriverProfile
-        fields = ["id", "user", "license_number", "verified_at", "rating"]
-        read_only_fields = ["id", "user", "verified_at", "rating"]
+        fields = [
+            "id",
+            "user",
+            "license_number",
+            "professional_card_number",
+            "company_name",
+            "siret_number",
+            "insurance_policy_number",
+            "gender",
+            "verified_at",
+            "rating",
+            "is_fleether_eligible",
+            "is_fleet_pmr_eligible",
+            "is_professional_profile_complete",
+        ]
+        read_only_fields = ["id", "user", "verified_at", "rating", "is_fleether_eligible", "is_fleet_pmr_eligible", "is_professional_profile_complete"]
+
+    def get_is_fleet_pmr_eligible(self, obj):
+        return obj.user.vehicles.filter(is_pmr_adapted=True).exists()
 
 
 class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
-        fields = ["id", "driver", "plate_number", "brand", "model", "color", "seats"]
+        fields = [
+            "id",
+            "driver",
+            "plate_number",
+            "brand",
+            "model",
+            "color",
+            "seats",
+            "is_pmr_adapted",
+            "pmr_certification_reference",
+        ]
         read_only_fields = ["id", "driver"]

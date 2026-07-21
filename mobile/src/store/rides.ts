@@ -3,6 +3,7 @@ import { api, Ride } from '../api/client';
 import { replaceRide } from './ride-utils';
 
 export type RideDraft = {
+  service_type: 'STANDARD' | 'FLEETHER' | 'FLEET_PMR';
   pickup_label: string;
   pickup_latitude: number;
   pickup_longitude: number;

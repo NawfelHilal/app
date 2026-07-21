@@ -29,6 +29,7 @@ def ride_payload(**overrides):
         "distance_km": "10.00",
         "duration_minutes": 20,
         "passenger_note": "Test recette Bloc 2",
+        "service_type": Ride.ServiceType.STANDARD,
     }
     payload.update(overrides)
     return payload
@@ -47,6 +48,7 @@ def create_ride(passenger, driver=None, status=Ride.Status.REQUESTED, **override
         dropoff_latitude=Decimal(payload["dropoff_latitude"]),
         dropoff_longitude=Decimal(payload["dropoff_longitude"]),
         passenger_note=payload["passenger_note"],
+        service_type=payload["service_type"],
         distance_km=Decimal(payload["distance_km"]),
         duration_minutes=payload["duration_minutes"],
         estimated_fare_cents=2500,
