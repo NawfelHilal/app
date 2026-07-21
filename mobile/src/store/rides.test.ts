@@ -114,16 +114,20 @@ describe('useRideStore', () => {
     mockedApi.post
       .mockResolvedValueOnce({ data: { client_secret: 'client-secret' } })
       .mockResolvedValueOnce({ data: {} })
-      .mockResolvedValueOnce({ data: ride(5, 'ACCEPTED') });
+      .mockResolvedValueOnce({ data: ride(5, 'ACCEPTED') })
+      .mockResolvedValueOnce({ data: ride(6, 'REQUESTED') });
 
     const clientSecret = await useRideStore.getState().createPaymentIntent(5);
     await useRideStore.getState().simulatePaymentIntent(5);
     const simulated = await useRideStore.getState().simulateRide(5);
+    const nearby = await useRideStore.getState().simulateNearbyRequest();
 
     expect(clientSecret).toBe('client-secret');
     expect(mockedApi.post).toHaveBeenNthCalledWith(1, '/payments/create-intent/', { ride_id: 5 });
     expect(mockedApi.post).toHaveBeenNthCalledWith(2, '/payments/simulate-intent/', { ride_id: 5 });
     expect(mockedApi.post).toHaveBeenNthCalledWith(3, '/rides/5/simulate/');
+    expect(mockedApi.post).toHaveBeenNthCalledWith(4, '/rides/simulate-nearby-request/');
     expect(simulated.status).toBe('ACCEPTED');
+    expect(nearby.id).toBe(6);
   });
 });

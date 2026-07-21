@@ -38,6 +38,7 @@ type RideState = {
   startRide: (rideId: number) => Promise<Ride>;
   completeRide: (rideId: number) => Promise<Ride>;
   simulateRide: (rideId: number) => Promise<Ride>;
+  simulateNearbyRequest: () => Promise<Ride>;
 };
 
 export const useRideStore = create<RideState>((set, get) => ({
@@ -99,6 +100,12 @@ export const useRideStore = create<RideState>((set, get) => ({
   },
   simulateRide: async (rideId) => {
     const response = await api.post(`/rides/${rideId}/simulate/`);
+    const ride = response.data as Ride;
+    set({ rides: replaceRide(get().rides, ride) });
+    return ride;
+  },
+  simulateNearbyRequest: async () => {
+    const response = await api.post('/rides/simulate-nearby-request/');
     const ride = response.data as Ride;
     set({ rides: replaceRide(get().rides, ride) });
     return ride;

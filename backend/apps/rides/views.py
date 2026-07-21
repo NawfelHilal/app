@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
+from decimal import Decimal
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -118,6 +119,52 @@ class RideViewSet(
         actor = demo_driver if next_status == Ride.Status.ACCEPTED else ride.driver or demo_driver
         ride = RideLifecycle().record(ride, next_status, actor)
         return Response(self.get_serializer(ride).data)
+
+    @action(detail=False, methods=["post"], url_path="simulate-nearby-request")
+    def simulate_nearby_request(self, request):
+        if not settings.ENABLE_DEMO_SIMULATION:
+            return Response({"detail": "Demo simulation is disabled."}, status=status.HTTP_404_NOT_FOUND)
+        if not request.user.is_driver:
+            return Response({"detail": "Only drivers can simulate nearby ride requests."}, status=status.HTTP_403_FORBIDDEN)
+
+        User = get_user_model()
+        passenger, _ = User.objects.get_or_create(
+            username="passenger",
+            defaults={
+                "email": "passenger@fleetpro.local",
+                "role": User.Role.PASSENGER,
+            },
+        )
+        passenger.email = "passenger@fleetpro.local"
+        passenger.role = User.Role.PASSENGER
+        passenger.set_password("password123")
+        passenger.save(update_fields=["email", "role", "password"])
+
+        position = RideMatcher()._driver_position(request.user.id) or (48.8566, 2.3522)
+        quote = FareQuoteSerializer(
+            data={
+                "distance_km": "4.80",
+                "duration_minutes": 16,
+                "service_type": Ride.ServiceType.STANDARD,
+            }
+        )
+        quote.is_valid(raise_exception=True)
+        fare = quote.validated_data["quote"]
+        ride = Ride.objects.create(
+            passenger=passenger,
+            service_type=Ride.ServiceType.STANDARD,
+            pickup_label="Demande démo proche chauffeur",
+            pickup_latitude=Decimal(str(position[0])),
+            pickup_longitude=Decimal(str(position[1])),
+            dropoff_label="Gare de Lyon",
+            dropoff_latitude=Decimal("48.844300"),
+            dropoff_longitude=Decimal("2.373000"),
+            passenger_note="Course générée depuis le mode simulation chauffeur.",
+            distance_km=fare.distance_km,
+            duration_minutes=fare.duration_minutes,
+            estimated_fare_cents=fare.fare_cents,
+        )
+        return Response(self.get_serializer(ride).data, status=status.HTTP_201_CREATED)
 
 
 class DriverProfileViewSet(

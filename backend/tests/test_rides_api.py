@@ -9,6 +9,14 @@ from apps.rides.models import DriverProfile, Ride, RideStatusEvent, Vehicle
 from .factories import create_ride, create_user, ride_payload
 
 
+class FakeGpsRedis:
+    def __init__(self, latitude=48.8566, longitude=2.3522):
+        self.payload = json.dumps({"latitude": latitude, "longitude": longitude})
+
+    def get(self, key):
+        return self.payload
+
+
 class RideApiTests(APITestCase):
     def test_health_endpoint_checks_database(self):
         response = self.client.get("/api/v1/health/")
@@ -70,6 +78,56 @@ class RideApiTests(APITestCase):
         self.assertEqual(len(passenger_response.data), 1)
         self.assertEqual(len(staff_response.data), 2)
         self.assertEqual(len(driver_response.data), 1)
+
+    def test_online_driver_sees_nearby_passenger_requested_ride(self):
+        passenger = create_user("online-passenger")
+        driver = create_user("online-driver", role="DRIVER")
+        self.client.force_authenticate(passenger)
+        created = self.client.post("/api/v1/rides/", ride_payload(), format="json")
+        self.assertEqual(created.status_code, 201)
+
+        self.client.force_authenticate(driver)
+        with patch("apps.rides.matching.Redis.from_url", return_value=FakeGpsRedis()):
+            response = self.client.get("/api/v1/rides/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([ride["id"] for ride in response.data], [created.data["id"]])
+        self.assertIn("accept", response.data[0]["_links"])
+
+    def test_online_driver_does_not_see_ride_when_too_far_from_pickup(self):
+        passenger = create_user("far-passenger")
+        driver = create_user("far-driver", role="DRIVER")
+        ride = create_ride(passenger)
+        self.client.force_authenticate(driver)
+
+        with patch("apps.rides.matching.Redis.from_url", return_value=FakeGpsRedis(latitude=43.2965, longitude=5.3698)):
+            response = self.client.get("/api/v1/rides/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(ride.id, [item["id"] for item in response.data])
+
+    @override_settings(ENABLE_DEMO_SIMULATION=True)
+    def test_driver_can_simulate_nearby_passenger_request(self):
+        driver = create_user("simulate-online-driver", role="DRIVER")
+        self.client.force_authenticate(driver)
+
+        with patch("apps.rides.matching.Redis.from_url", return_value=FakeGpsRedis()):
+            created = self.client.post("/api/v1/rides/simulate-nearby-request/", {}, format="json")
+            listed = self.client.get("/api/v1/rides/")
+
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(created.data["pickup_label"], "Demande démo proche chauffeur")
+        self.assertIn("accept", created.data["_links"])
+        self.assertEqual([ride["id"] for ride in listed.data], [created.data["id"]])
+
+    @override_settings(ENABLE_DEMO_SIMULATION=True)
+    def test_passenger_cannot_simulate_driver_nearby_request(self):
+        passenger = create_user("simulate-not-driver")
+        self.client.force_authenticate(passenger)
+
+        response = self.client.post("/api/v1/rides/simulate-nearby-request/", {}, format="json")
+
+        self.assertEqual(response.status_code, 403)
 
     def test_driver_accepts_nearby_ride_and_conflict_on_closed_ride(self):
         passenger = create_user("accept-passenger")

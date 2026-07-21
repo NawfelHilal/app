@@ -27,7 +27,7 @@ const tabs: TabItem<DriverTab>[] = [
 export function DriverShellScreen({ navigation }: Props) {
   const [activeTab, setActiveTab] = useState<DriverTab>('drive');
   const [online, setOnline] = useState(false);
-  const { rides, loadRides, acceptRide } = useRideStore();
+  const { rides, loadRides, acceptRide, simulateNearbyRequest } = useRideStore();
   const tracking = useRef<Location.LocationSubscription | undefined>(undefined);
   const activeRideId = rides.find((ride) => ride.status === 'ACCEPTED' || ride.status === 'IN_PROGRESS')?.id;
   const activeRideIdRef = useRef<number | undefined>(undefined);
@@ -93,6 +93,15 @@ export function DriverShellScreen({ navigation }: Props) {
             online={online}
             rides={rides}
             onToggleOnline={toggleOnline}
+            onSimulateNearbyRequest={async () => {
+              try {
+                await simulateNearbyRequest();
+                await loadRides();
+                setActiveTab('requests');
+              } catch {
+                Alert.alert('Simulation impossible', 'Vérifie que le mode démo backend est activé.');
+              }
+            }}
             onOpenRide={(rideId) => navigation.navigate('ActiveRide', { rideId })}
           />
         ) : null}
@@ -130,14 +139,17 @@ function DriverHome({
   online,
   rides,
   onToggleOnline,
+  onSimulateNearbyRequest,
   onOpenRide,
 }: {
   online: boolean;
   rides: ReturnType<typeof useRideStore.getState>['rides'];
   onToggleOnline: () => void;
+  onSimulateNearbyRequest: () => Promise<void>;
   onOpenRide: (rideId: number) => void;
 }) {
   const activeRide = rides.find((ride) => ride.status === 'ACCEPTED' || ride.status === 'IN_PROGRESS');
+  const demoSimulationEnabled = process.env.EXPO_PUBLIC_ENABLE_DEMO_SIMULATION === 'true';
 
   return (
     <View style={styles.home}>
@@ -157,6 +169,12 @@ function DriverHome({
           <DriverStat label="Courses" value="3" />
           <DriverStat label="Note" value="5.0" />
         </View>
+        {demoSimulationEnabled ? (
+          <Pressable onPress={onSimulateNearbyRequest} style={styles.demoButton}>
+            <Feather name="plus-circle" size={18} color={colors.surface} />
+            <Text style={styles.demoButtonText}>Simuler une demande client proche</Text>
+          </Pressable>
+        ) : null}
         {activeRide ? (
           <Pressable onPress={() => onOpenRide(activeRide.id)} style={styles.activeRideCard}>
             <View style={styles.rowBody}>
@@ -312,6 +330,8 @@ const styles = StyleSheet.create({
   stat: { flex: 1, backgroundColor: colors.softAccent, borderRadius: 8, padding: 14 },
   statValue: { color: colors.ink, fontWeight: '900', fontSize: 20 },
   statLabel: { color: colors.muted, marginTop: 4, fontWeight: '700' },
+  demoButton: { backgroundColor: colors.ink, borderRadius: 8, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  demoButtonText: { color: colors.surface, fontWeight: '900' },
   activeRideCard: { backgroundColor: colors.softAccent, borderRadius: 8, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   page: { flex: 1, backgroundColor: colors.background, padding: 18 },
   pageTitle: { color: colors.ink, fontSize: 32, fontWeight: '900', marginBottom: 18 },
