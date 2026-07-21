@@ -48,7 +48,7 @@ export class GpsGateway implements OnGatewayConnection {
       socket.data.rideIds = new Set<number>();
       socket.join(`user:${user.id}`);
       socket.emit('gps:ready', { userId: user.id, role: user.role });
-    } catch (error) {
+    } catch {
       socket.emit('gps:error', { message: 'Unauthorized socket.' });
       socket.disconnect(true);
     }

@@ -261,7 +261,7 @@ async function runAction(action: () => Promise<unknown>, setSubmitting: (value: 
   setSubmitting(true);
   try {
     await action();
-  } catch (error) {
+  } catch {
     Alert.alert('Simulation impossible', 'Verifie que le backend est redemarre et que la course est encore active.');
   } finally {
     setSubmitting(false);
