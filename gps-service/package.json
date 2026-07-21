@@ -7,6 +7,7 @@
     "start:dev": "nest start --watch",
     "build": "nest build",
     "test": "node scripts/run-tests.js",
+    "test:coverage": "node scripts/run-tests.js --coverage",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit"
   },
@@ -44,6 +45,21 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "**/*.ts",
+      "!**/*.spec.ts",
+      "!app.controller.ts",
+      "!app.module.ts",
+      "!main.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 70,
+        "functions": 75,
+        "lines": 75,
+        "statements": 75
+      }
+    }
   }
 }

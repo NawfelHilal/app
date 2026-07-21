@@ -1,6 +1,7 @@
 import json
 
 from django.test import SimpleTestCase, override_settings
+from redis.exceptions import RedisError
 
 from apps.rides.matching import RideMatcher, distance_km
 
@@ -11,6 +12,11 @@ class FakeRedis:
 
     def get(self, key):
         return self.payload
+
+
+class BrokenRedis:
+    def get(self, key):
+        raise RedisError("redis down")
 
 
 class RideMatcherTests(SimpleTestCase):
@@ -30,6 +36,14 @@ class RideMatcherTests(SimpleTestCase):
         ids = RideMatcher(FakeRedis(position)).nearby_ride_ids(42, rides)
 
         self.assertEqual(ids, [1])
+
+    def test_missing_invalid_and_broken_driver_position_returns_no_rides(self):
+        rides = FakeRideQuerySet([FakeRide(1, 48.8584, 2.2945)])
+
+        self.assertEqual(RideMatcher(FakeRedis(None)).nearby_ride_ids(42, rides), [])
+        self.assertEqual(RideMatcher(FakeRedis("{bad-json")).nearby_ride_ids(42, rides), [])
+        self.assertEqual(RideMatcher(FakeRedis(json.dumps({"latitude": "bad"}))).nearby_ride_ids(42, rides), [])
+        self.assertEqual(RideMatcher(BrokenRedis()).nearby_ride_ids(42, rides), [])
 
 
 class FakeRide:

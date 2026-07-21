@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r backend/requirements.txt
-      - run: python manage.py test tests
+      - run: coverage run manage.py test tests
         working-directory: backend
         env:
           DJANGO_SECRET_KEY: ci
@@ -37,6 +37,10 @@ jobs:
           POSTGRES_PASSWORD: fleetpro
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
+      - run: coverage report --fail-under=90
+        working-directory: backend
+      - run: coverage xml
+        working-directory: backend
       - run: python manage.py makemigrations --check --dry-run
         working-directory: backend
 
@@ -49,7 +53,7 @@ jobs:
           node-version: "24"
       - run: npm ci
         working-directory: gps-service
-      - run: npm run test
+      - run: npm run test:coverage
         working-directory: gps-service
       - run: npm run typecheck
         working-directory: gps-service
@@ -64,6 +68,8 @@ jobs:
         with:
           node-version: "24"
       - run: npm ci
+        working-directory: mobile
+      - run: npm run test:coverage
         working-directory: mobile
       - run: npm run typecheck
         working-directory: mobile

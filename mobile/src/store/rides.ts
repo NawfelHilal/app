@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api, Ride } from '../api/client';
+import { replaceRide } from './ride-utils';
 
 export type RideDraft = {
   pickup_label: string;
@@ -37,14 +38,6 @@ type RideState = {
   completeRide: (rideId: number) => Promise<Ride>;
   simulateRide: (rideId: number) => Promise<Ride>;
 };
-
-function replaceRide(rides: Ride[], updatedRide: Ride): Ride[] {
-  const exists = rides.some((ride) => ride.id === updatedRide.id);
-  if (!exists) {
-    return [updatedRide, ...rides];
-  }
-  return rides.map((ride) => (ride.id === updatedRide.id ? updatedRide : ride));
-}
 
 export const useRideStore = create<RideState>((set, get) => ({
   rides: [],
