@@ -37,6 +37,9 @@ class RideApiTests(APITestCase):
         self.assertEqual(response.data["estimated_fare_cents"], 2500)
         self.assertEqual(response.data["commission_cents"], 375)
         self.assertEqual(response.data["driver_earnings_cents"], 2125)
+        self.assertIn("self", response.data["_links"])
+        self.assertIn("cancel", response.data["_links"])
+        self.assertIn("payment_intent", response.data["_links"])
 
     def test_driver_cannot_request_ride(self):
         driver = create_user("driver-cannot-create", role="DRIVER")
@@ -83,6 +86,7 @@ class RideApiTests(APITestCase):
         self.assertEqual(accepted.status_code, 200)
         self.assertEqual(ride.driver_id, driver.id)
         self.assertEqual(ride.status, Ride.Status.ACCEPTED)
+        self.assertIn("start", accepted.data["_links"])
         self.assertEqual(conflict.status_code, 409)
 
     def test_passenger_cannot_accept_ride(self):
@@ -119,6 +123,7 @@ class RideApiTests(APITestCase):
         self.assertEqual(conflict_complete.status_code, 409)
         self.assertEqual(completed.status_code, 200)
         self.assertEqual(completed.data["status"], Ride.Status.COMPLETED)
+        self.assertNotIn("complete", completed.data["_links"])
         self.assertEqual(forbidden_complete.status_code, 404)
 
     def test_passenger_cancel_persists_reason_and_event(self):

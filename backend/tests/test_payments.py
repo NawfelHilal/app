@@ -146,6 +146,7 @@ class PaymentTests(APITestCase):
 
         self.assertEqual(created.status_code, 201)
         self.assertEqual(created.data["client_secret"], "secret")
+        self.assertIn("ride", created.data["payment"]["_links"])
         self.assertEqual(conflict.status_code, 409)
 
     def test_payment_list_is_scoped_to_passenger_and_staff_sees_all(self):

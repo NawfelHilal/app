@@ -15,8 +15,8 @@ class AccountViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             serializer = UserSerializer(request.user, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data)
-        return Response(UserSerializer(request.user).data)
+            return Response(UserSerializer(request.user, context={"request": request}).data)
+        return Response(UserSerializer(request.user, context={"request": request}).data)
 
     @action(detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated], url_path="change-password")
     def change_password(self, request):

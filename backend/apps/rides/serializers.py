@@ -29,6 +29,7 @@ class RideSerializer(serializers.ModelSerializer):
     commission_cents = serializers.IntegerField(read_only=True)
     driver_earnings_cents = serializers.IntegerField(read_only=True)
     payment_status = serializers.SerializerMethodField()
+    _links = serializers.SerializerMethodField()
 
     class Meta:
         model = Ride
@@ -52,6 +53,7 @@ class RideSerializer(serializers.ModelSerializer):
             "commission_cents",
             "driver_earnings_cents",
             "payment_status",
+            "_links",
             "requested_at",
             "accepted_at",
             "started_at",
@@ -81,6 +83,44 @@ class RideSerializer(serializers.ModelSerializer):
             return obj.payment.status
         except ObjectDoesNotExist:
             return None
+
+    def get__links(self, obj):
+        request = self.context.get("request")
+
+        def uri(path: str) -> str:
+            if request:
+                return request.build_absolute_uri(path)
+            return path
+
+        links = {
+            "self": {"href": uri(f"/api/v1/rides/{obj.id}/"), "method": "GET"},
+            "collection": {"href": uri("/api/v1/rides/"), "method": "GET"},
+        }
+        user = getattr(request, "user", None)
+        user_id = getattr(user, "id", None)
+        is_driver = bool(getattr(user, "is_driver", False))
+        is_staff = bool(getattr(user, "is_staff", False))
+
+        if obj.status == Ride.Status.REQUESTED:
+            if is_driver:
+                links["accept"] = {"href": uri(f"/api/v1/rides/{obj.id}/accept/"), "method": "POST"}
+            if user_id == obj.passenger_id or is_staff:
+                links["cancel"] = {"href": uri(f"/api/v1/rides/{obj.id}/cancel/"), "method": "POST"}
+                links["payment_intent"] = {"href": uri("/api/v1/payments/create-intent/"), "method": "POST"}
+                links["simulated_payment_intent"] = {"href": uri("/api/v1/payments/simulate-intent/"), "method": "POST"}
+                links["simulate"] = {"href": uri(f"/api/v1/rides/{obj.id}/simulate/"), "method": "POST"}
+        elif obj.status == Ride.Status.ACCEPTED:
+            if user_id == obj.driver_id:
+                links["start"] = {"href": uri(f"/api/v1/rides/{obj.id}/start/"), "method": "POST"}
+            if user_id in {obj.passenger_id, obj.driver_id} or is_staff:
+                links["cancel"] = {"href": uri(f"/api/v1/rides/{obj.id}/cancel/"), "method": "POST"}
+        elif obj.status == Ride.Status.IN_PROGRESS:
+            if user_id == obj.driver_id:
+                links["complete"] = {"href": uri(f"/api/v1/rides/{obj.id}/complete/"), "method": "POST"}
+            if user_id in {obj.passenger_id, obj.driver_id} or is_staff:
+                links["cancel"] = {"href": uri(f"/api/v1/rides/{obj.id}/cancel/"), "method": "POST"}
+
+        return links
 
     def create(self, validated_data):
         quote = FareCalculator().quote(

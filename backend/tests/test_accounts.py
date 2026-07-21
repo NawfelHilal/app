@@ -59,6 +59,19 @@ class AccountApiTests(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["username"], "me-passenger")
+        self.assertIn("self", response.data["_links"])
+        self.assertIn("change_password", response.data["_links"])
+        self.assertIn("rides", response.data["_links"])
+
+    def test_driver_profile_links_include_driver_resources(self):
+        user = create_user("me-driver", role=get_user_model().Role.DRIVER)
+        self.client.force_authenticate(user)
+
+        response = self.client.get("/api/v1/accounts/me/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("driver_profile", response.data["_links"])
+        self.assertIn("vehicles", response.data["_links"])
 
     def test_change_password_validates_current_password(self):
         user = create_user("password-user")
