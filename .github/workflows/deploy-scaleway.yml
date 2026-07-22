@@ -1,0 +1,134 @@
+name: Deploy Scaleway
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - CI
+    branches:
+      - main
+      - master
+    types:
+      - completed
+
+concurrency:
+  group: deploy-scaleway
+  cancel-in-progress: false
+
+env:
+  SCALEWAY_REGISTRY: rg.fr-par.scw.cloud/fleet-pro
+  BACKEND_IMAGE: rg.fr-par.scw.cloud/fleet-pro/fleetpro-backend
+  GPS_IMAGE: rg.fr-par.scw.cloud/fleet-pro/fleetpro-gps-service
+  DEPLOY_PATH: /opt/fleetpro
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: read
+    steps:
+      - name: Resolve deployment ref
+        id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ref.outputs.sha }}
+
+      - name: Check deployment secrets
+        run: |
+          test -n "$SCW_REGISTRY_TOKEN" || (echo "SCW_REGISTRY_TOKEN is missing." && exit 1)
+          test -n "$SCALEWAY_SSH_HOST" || (echo "SCALEWAY_SSH_HOST is missing." && exit 1)
+          test -n "$SCALEWAY_SSH_USER" || (echo "SCALEWAY_SSH_USER is missing." && exit 1)
+          test -n "$SCALEWAY_SSH_PRIVATE_KEY" || (echo "SCALEWAY_SSH_PRIVATE_KEY is missing." && exit 1)
+        env:
+          SCW_REGISTRY_TOKEN: ${{ secrets.SCW_REGISTRY_TOKEN }}
+          SCALEWAY_SSH_HOST: ${{ secrets.SCALEWAY_SSH_HOST }}
+          SCALEWAY_SSH_USER: ${{ secrets.SCALEWAY_SSH_USER }}
+          SCALEWAY_SSH_PRIVATE_KEY: ${{ secrets.SCALEWAY_SSH_PRIVATE_KEY }}
+
+      - name: Login to Scaleway Registry
+        run: |
+          printf '%s' "$SCW_REGISTRY_TOKEN" | docker login "$SCALEWAY_REGISTRY" -u nologin --password-stdin
+        env:
+          SCW_REGISTRY_TOKEN: ${{ secrets.SCW_REGISTRY_TOKEN }}
+
+      - name: Build and push backend image
+        run: |
+          docker build \
+            -f backend/Dockerfile.prod \
+            -t "$BACKEND_IMAGE:${{ steps.ref.outputs.sha }}" \
+            -t "$BACKEND_IMAGE:latest" \
+            backend
+          docker push "$BACKEND_IMAGE:${{ steps.ref.outputs.sha }}"
+          docker push "$BACKEND_IMAGE:latest"
+
+      - name: Build and push GPS image
+        run: |
+          docker build \
+            -f gps-service/Dockerfile.prod \
+            -t "$GPS_IMAGE:${{ steps.ref.outputs.sha }}" \
+            -t "$GPS_IMAGE:latest" \
+            gps-service
+          docker push "$GPS_IMAGE:${{ steps.ref.outputs.sha }}"
+          docker push "$GPS_IMAGE:latest"
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SCALEWAY_SSH_PRIVATE_KEY" > ~/.ssh/scaleway
+          chmod 600 ~/.ssh/scaleway
+          ssh-keyscan -H "$SCALEWAY_SSH_HOST" >> ~/.ssh/known_hosts
+        env:
+          SCALEWAY_SSH_HOST: ${{ secrets.SCALEWAY_SSH_HOST }}
+          SCALEWAY_SSH_PRIVATE_KEY: ${{ secrets.SCALEWAY_SSH_PRIVATE_KEY }}
+
+      - name: Upload compose files
+        run: |
+          ssh -i ~/.ssh/scaleway "$SCALEWAY_SSH_USER@$SCALEWAY_SSH_HOST" "mkdir -p '$DEPLOY_PATH/infra/nginx' '$DEPLOY_PATH/deploy'"
+          scp -i ~/.ssh/scaleway docker-compose.prod.yml "$SCALEWAY_SSH_USER@$SCALEWAY_SSH_HOST:$DEPLOY_PATH/docker-compose.prod.yml"
+          scp -i ~/.ssh/scaleway infra/nginx/nginx.prod.conf "$SCALEWAY_SSH_USER@$SCALEWAY_SSH_HOST:$DEPLOY_PATH/infra/nginx/nginx.prod.conf"
+          scp -i ~/.ssh/scaleway deploy/run_seed_prod.sh "$SCALEWAY_SSH_USER@$SCALEWAY_SSH_HOST:$DEPLOY_PATH/deploy/run_seed_prod.sh"
+        env:
+          SCALEWAY_SSH_HOST: ${{ secrets.SCALEWAY_SSH_HOST }}
+          SCALEWAY_SSH_USER: ${{ secrets.SCALEWAY_SSH_USER }}
+
+      - name: Deploy on Scaleway instance
+        run: |
+          ssh -i ~/.ssh/scaleway "$SCALEWAY_SSH_USER@$SCALEWAY_SSH_HOST" \
+            "SCW_REGISTRY_TOKEN='$SCW_REGISTRY_TOKEN' SCALEWAY_REGISTRY='$SCALEWAY_REGISTRY' IMAGE_TAG='${{ steps.ref.outputs.sha }}' DEPLOY_PATH='$DEPLOY_PATH' sh -s" <<'EOF'
+          set -eu
+
+          cd "$DEPLOY_PATH"
+          test -f .env.prod || (echo ".env.prod is missing on $DEPLOY_PATH" && exit 1)
+
+          if grep -q '^SCALEWAY_REGISTRY=' .env.prod; then
+            sed -i "s|^SCALEWAY_REGISTRY=.*|SCALEWAY_REGISTRY=$SCALEWAY_REGISTRY|" .env.prod
+          else
+            printf '\nSCALEWAY_REGISTRY=%s\n' "$SCALEWAY_REGISTRY" >> .env.prod
+          fi
+
+          if grep -q '^IMAGE_TAG=' .env.prod; then
+            sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$IMAGE_TAG|" .env.prod
+          else
+            printf '\nIMAGE_TAG=%s\n' "$IMAGE_TAG" >> .env.prod
+          fi
+
+          chmod +x deploy/run_seed_prod.sh
+          printf '%s' "$SCW_REGISTRY_TOKEN" | docker login "$SCALEWAY_REGISTRY" -u nologin --password-stdin
+          docker compose --env-file .env.prod -f docker-compose.prod.yml pull backend gps-service nginx postgres redis
+          docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --no-build
+          docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T backend python manage.py migrate
+          docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T backend python manage.py seed_demo
+          docker compose --env-file .env.prod -f docker-compose.prod.yml ps
+          EOF
+        env:
+          SCW_REGISTRY_TOKEN: ${{ secrets.SCW_REGISTRY_TOKEN }}
+          SCALEWAY_SSH_HOST: ${{ secrets.SCALEWAY_SSH_HOST }}
+          SCALEWAY_SSH_USER: ${{ secrets.SCALEWAY_SSH_USER }}
