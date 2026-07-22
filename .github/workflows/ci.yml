@@ -108,6 +108,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
       - uses: actions/download-artifact@v4
         with:
           name: backend-coverage
@@ -139,6 +143,14 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+
+      - name: Install GPS dependencies for SonarQube
+        run: npm ci
+        working-directory: gps-service
+
+      - name: Install mobile dependencies for SonarQube
+        run: npm ci
+        working-directory: mobile
 
       - name: SonarQube Community Build scan
         uses: SonarSource/sonarqube-scan-action@v5
