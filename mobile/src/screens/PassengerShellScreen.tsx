@@ -51,14 +51,28 @@ function PassengerHome({ onRide }: { onRide: () => void }) {
       <MapCanvas />
       <View style={styles.sheet}>
         <Text style={styles.heroTitle}>Ou allez-vous ?</Text>
-        <FieldPill title="Destination" subtitle="Rechercher une adresse" icon={<Feather name="map-pin" size={20} color={colors.ink} />} onPress={onRide} />
+        <FieldPill
+          title="Destination"
+          subtitle="Rechercher une adresse"
+          icon={<Feather name="map-pin" size={20} color={colors.ink} />}
+          onPress={onRide}
+          accessibilityLabel="Rechercher une destination"
+          accessibilityHint="Ouvre l'écran de création de course"
+        />
         <View style={styles.shortcuts}>
-          <FieldPill title="Travail" subtitle="12 min" icon={<Feather name="briefcase" size={18} color={colors.ink} />} onPress={onRide} />
-          <FieldPill title="Maison" subtitle="16 min" icon={<Feather name="home" size={18} color={colors.ink} />} onPress={onRide} />
+          <FieldPill title="Travail" subtitle="12 min" icon={<Feather name="briefcase" size={18} color={colors.ink} />} onPress={onRide} accessibilityLabel="Destination Travail" accessibilityHint="Prépare une course vers le travail" />
+          <FieldPill title="Maison" subtitle="16 min" icon={<Feather name="home" size={18} color={colors.ink} />} onPress={onRide} accessibilityLabel="Destination Maison" accessibilityHint="Prépare une course vers la maison" />
         </View>
         <SectionHeader title="Adresses recentes" />
         {savedPlaces.map((place) => (
-          <Pressable key={place.id} onPress={onRide} style={styles.placeRow}>
+          <Pressable
+            key={place.id}
+            onPress={onRide}
+            accessibilityRole="button"
+            accessibilityLabel={`Adresse récente ${place.label}`}
+            accessibilityHint={`${place.address}. Ouvre la création de course`}
+            style={styles.placeRow}
+          >
             <View style={styles.dot} />
             <View style={styles.placeText}>
               <Text style={styles.placeTitle}>{place.label}</Text>
@@ -81,7 +95,13 @@ function PassengerActivity({ rides, onOpen }: { rides: ReturnType<typeof useRide
         contentContainerStyle={styles.list}
         ListEmptyComponent={<Text style={styles.empty}>Aucune course pour le moment.</Text>}
         renderItem={({ item }) => (
-          <Pressable onPress={() => onOpen(item.id)} style={styles.rowCard}>
+          <Pressable
+            onPress={() => onOpen(item.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Course vers ${item.dropoff_label}`}
+            accessibilityHint={`${statusLabel(item.status)}, départ ${item.pickup_label}, prix ${formatEuro(item.final_fare_cents || item.estimated_fare_cents)}`}
+            style={styles.rowCard}
+          >
             <View style={styles.routeIcon}><Feather name="map-pin" size={18} color={colors.surface} /></View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>{item.dropoff_label}</Text>
@@ -141,7 +161,13 @@ function PassengerAccount() {
           <Text style={styles.rowTitle}>{item}</Text>
         </View>
       ))}
-      <Pressable onPress={logout} style={styles.logout}>
+      <Pressable
+        onPress={logout}
+        accessibilityRole="button"
+        accessibilityLabel="Se déconnecter"
+        accessibilityHint="Ferme la session passager"
+        style={styles.logout}
+      >
         <Text style={styles.logoutText}>Se deconnecter</Text>
       </Pressable>
     </ScrollView>

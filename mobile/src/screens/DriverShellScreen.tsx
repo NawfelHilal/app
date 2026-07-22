@@ -160,7 +160,14 @@ function DriverHome({
             <Text style={styles.heroTitle}>{online ? 'Vous etes en ligne' : 'Vous etes hors ligne'}</Text>
             <Text style={styles.muted}>{online ? 'Les demandes proches peuvent arriver.' : 'Passez en ligne pour recevoir des courses.'}</Text>
           </View>
-          <Pressable onPress={onToggleOnline} style={[styles.powerButton, online && styles.powerButtonOn]}>
+          <Pressable
+            onPress={onToggleOnline}
+            accessibilityRole="switch"
+            accessibilityLabel="Disponibilité chauffeur"
+            accessibilityHint={online ? 'Passe hors ligne et arrête le partage GPS' : 'Passe en ligne et active le partage GPS'}
+            accessibilityState={{ checked: online }}
+            style={[styles.powerButton, online && styles.powerButtonOn]}
+          >
             <Feather name="power" size={24} color={colors.surface} />
           </Pressable>
         </View>
@@ -170,13 +177,25 @@ function DriverHome({
           <DriverStat label="Note" value="5.0" />
         </View>
         {demoSimulationEnabled ? (
-          <Pressable onPress={onSimulateNearbyRequest} style={styles.demoButton}>
+          <Pressable
+            onPress={onSimulateNearbyRequest}
+            accessibilityRole="button"
+            accessibilityLabel="Simuler une demande client proche"
+            accessibilityHint="Crée une course démo proche pour vérifier le matching chauffeur"
+            style={styles.demoButton}
+          >
             <Feather name="plus-circle" size={18} color={colors.surface} />
             <Text style={styles.demoButtonText}>Simuler une demande client proche</Text>
           </Pressable>
         ) : null}
         {activeRide ? (
-          <Pressable onPress={() => onOpenRide(activeRide.id)} style={styles.activeRideCard}>
+          <Pressable
+            onPress={() => onOpenRide(activeRide.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Course active ${statusLabel(activeRide.status)}`}
+            accessibilityHint={`${activeRide.pickup_label} vers ${activeRide.dropoff_label}`}
+            style={styles.activeRideCard}
+          >
             <View style={styles.rowBody}>
               <Text style={styles.cardTitle}>{statusLabel(activeRide.status)}</Text>
               <Text style={styles.muted}>{activeRide.pickup_label} vers {activeRide.dropoff_label}</Text>
@@ -210,7 +229,13 @@ function DriverRequests({
         contentContainerStyle={styles.list}
         ListEmptyComponent={<Text style={styles.muted}>Aucune demande disponible.</Text>}
         renderItem={({ item }) => (
-          <Pressable onPress={() => item.status === 'REQUESTED' ? undefined : onOpenRide(item.id)} style={styles.requestCard}>
+          <Pressable
+            onPress={() => item.status === 'REQUESTED' ? undefined : onOpenRide(item.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Course ${statusLabel(item.status)} vers ${item.dropoff_label}`}
+            accessibilityHint={`Départ ${item.pickup_label}, gain chauffeur ${formatEuro(item.driver_earnings_cents)}`}
+            style={styles.requestCard}
+          >
             <View style={styles.routeLine}>
               <Feather name="map-pin" size={20} color={colors.ink} />
               <View style={styles.routeBody}>
@@ -224,11 +249,23 @@ function DriverRequests({
                 <Text style={styles.muted}>apres commission 15%</Text>
               </View>
               {item.status === 'REQUESTED' ? (
-                <Pressable onPress={() => onAccept(item.id)} style={styles.acceptButton}>
+                <Pressable
+                  onPress={() => onAccept(item.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Accepter la course"
+                  accessibilityHint={`Accepte la course vers ${item.dropoff_label}`}
+                  style={styles.acceptButton}
+                >
                   <Text style={styles.acceptText}>Accepter</Text>
                 </Pressable>
               ) : (
-                <Pressable onPress={() => onOpenRide(item.id)} style={styles.acceptButton}>
+                <Pressable
+                  onPress={() => onOpenRide(item.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Continuer la course"
+                  accessibilityHint={`Ouvre le suivi vers ${item.dropoff_label}`}
+                  style={styles.acceptButton}
+                >
                   <Text style={styles.acceptText}>Continuer</Text>
                 </Pressable>
               )}
@@ -290,7 +327,13 @@ function DriverAccount() {
           <Text style={styles.cardTitle}>{item}</Text>
         </View>
       ))}
-      <Pressable onPress={logout} style={styles.logout}>
+      <Pressable
+        onPress={logout}
+        accessibilityRole="button"
+        accessibilityLabel="Se déconnecter"
+        accessibilityHint="Ferme la session chauffeur"
+        style={styles.logout}
+      >
         <Text style={styles.logoutText}>Se deconnecter</Text>
       </Pressable>
     </ScrollView>

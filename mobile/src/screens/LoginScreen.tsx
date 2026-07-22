@@ -36,20 +36,71 @@ export function LoginScreen({ navigation }: Props) {
       <View style={styles.logoMark}><Text style={styles.logoText}>F</Text></View>
       <Text style={styles.brand}>FleetPro</Text>
       <Text style={styles.subtitle}>Courses VTC ethiques, commission fixe et experience chauffeur claire.</Text>
-      <TextInput value={username} onChangeText={setUsername} autoCapitalize="none" placeholder="Identifiant" placeholderTextColor={colors.muted} style={styles.input} />
-      <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder="Mot de passe" placeholderTextColor={colors.muted} style={styles.input} />
-      <Pressable onPress={() => submit()} disabled={loading} style={styles.button}>
+      <TextInput
+        value={username}
+        onChangeText={setUsername}
+        autoCapitalize="none"
+        placeholder="Identifiant"
+        placeholderTextColor={colors.muted}
+        style={styles.input}
+        accessibilityLabel="Identifiant"
+        accessibilityHint="Saisissez votre nom d'utilisateur FleetPro"
+        textContentType="username"
+      />
+      <TextInput
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        placeholder="Mot de passe"
+        placeholderTextColor={colors.muted}
+        style={styles.input}
+        accessibilityLabel="Mot de passe"
+        accessibilityHint="Saisissez votre mot de passe"
+        textContentType="password"
+      />
+      <Pressable
+        onPress={() => submit()}
+        disabled={loading}
+        accessibilityRole="button"
+        accessibilityLabel={loading ? 'Connexion en cours' : 'Se connecter'}
+        accessibilityHint="Valide les identifiants saisis"
+        accessibilityState={{ disabled: loading }}
+        style={styles.button}
+      >
         <Text style={styles.buttonText}>{loading ? 'Connexion...' : 'Se connecter'}</Text>
       </Pressable>
       <View style={styles.demoRow}>
-        <Pressable onPress={() => submit({ username: 'passenger', password: 'password123' })} disabled={loading} style={styles.demoButton}>
+        <Pressable
+          onPress={() => submit({ username: 'passenger', password: 'password123' })}
+          disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel="Connexion passager démo"
+          accessibilityHint="Connecte automatiquement le compte passager de démonstration"
+          accessibilityState={{ disabled: loading }}
+          style={styles.demoButton}
+        >
           <Text style={styles.demoText}>Passager démo</Text>
         </Pressable>
-        <Pressable onPress={() => submit({ username: 'driver', password: 'password123' })} disabled={loading} style={styles.demoButton}>
+        <Pressable
+          onPress={() => submit({ username: 'driver', password: 'password123' })}
+          disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel="Connexion chauffeur démo"
+          accessibilityHint="Connecte automatiquement le compte chauffeur de démonstration"
+          accessibilityState={{ disabled: loading }}
+          style={styles.demoButton}
+        >
           <Text style={styles.demoText}>Chauffeur démo</Text>
         </Pressable>
       </View>
-      <Pressable onPress={() => navigation.navigate('Register')}><Text style={styles.register}>Créer un compte</Text></Pressable>
+      <Pressable
+        onPress={() => navigation.navigate('Register')}
+        accessibilityRole="button"
+        accessibilityLabel="Créer un compte"
+        accessibilityHint="Ouvre le formulaire d'inscription"
+      >
+        <Text style={styles.register}>Créer un compte</Text>
+      </Pressable>
       <Text style={styles.helper}>passenger / password123 ou driver / password123</Text>
     </SafeAreaView>
   );

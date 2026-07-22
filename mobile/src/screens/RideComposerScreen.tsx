@@ -103,7 +103,15 @@ export function RideComposerScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.iconButton}><Feather name="arrow-left" size={22} color={colors.ink} /></Pressable>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Retour"
+          accessibilityHint="Revient à l'accueil passager"
+          style={styles.iconButton}
+        >
+          <Feather name="arrow-left" size={22} color={colors.ink} />
+        </Pressable>
         <Text style={styles.title}>Votre trajet</Text>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
@@ -116,6 +124,8 @@ export function RideComposerScreen({ navigation }: Props) {
             placeholder="Note au chauffeur"
             placeholderTextColor={colors.muted}
             style={styles.input}
+            accessibilityLabel="Note au chauffeur"
+            accessibilityHint="Ajoutez une information utile pour le chauffeur"
           />
         </View>
         <Text style={styles.sectionTitle}>Destination</Text>
@@ -123,6 +133,10 @@ export function RideComposerScreen({ navigation }: Props) {
           <Pressable
             key={place.id}
             onPress={() => setSelectedPlaceId(place.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Destination ${place.label}`}
+            accessibilityHint={`${place.address}, trajet estimé à ${place.durationMinutes} minutes`}
+            accessibilityState={{ selected: selectedPlaceId === place.id }}
             style={[styles.optionRow, selectedPlaceId === place.id && styles.optionSelected]}
           >
             <View style={styles.optionText}>
@@ -139,6 +153,10 @@ export function RideComposerScreen({ navigation }: Props) {
             <Pressable
               key={option.id}
               onPress={() => setSelectedServiceId(option.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`Course ${option.name}, ${formatEuro(optionFare)}`}
+              accessibilityHint={`${option.description}. Arrive dans ${option.eta}`}
+              accessibilityState={{ selected: selectedServiceId === option.id }}
               style={[styles.optionRow, selectedServiceId === option.id && styles.optionSelected]}
             >
               <View style={styles.carIcon}><Text style={styles.carEmoji}>car</Text></View>
@@ -157,7 +175,12 @@ export function RideComposerScreen({ navigation }: Props) {
           <Text style={styles.footerMeta}>{selectedService.name}</Text>
           <Text style={styles.footerPrice}>{formatEuro(fare)}</Text>
         </View>
-        <AppButton label="Confirmer" onPress={confirmRide} />
+        <AppButton
+          label="Confirmer"
+          onPress={confirmRide}
+          accessibilityLabel={`Confirmer la course ${selectedService.name}`}
+          accessibilityHint={`Demande une course vers ${selectedPlace.label} pour ${formatEuro(fare)}`}
+        />
       </View>
     </SafeAreaView>
   );

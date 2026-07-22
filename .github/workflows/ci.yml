@@ -157,3 +157,40 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+
+      - name: Show SonarQube Quality Gate details
+        if: failure()
+        run: |
+          python - <<'PY'
+          import base64
+          import json
+          import os
+          import sys
+          import urllib.request
+
+          host = os.environ["SONAR_HOST_URL"].rstrip("/")
+          token = os.environ["SONAR_TOKEN"]
+          url = f"{host}/api/qualitygates/project_status?projectKey=fleetpro"
+          request = urllib.request.Request(url)
+          basic = base64.b64encode(f"{token}:".encode()).decode()
+          request.add_header("Authorization", f"Basic {basic}")
+
+          with urllib.request.urlopen(request, timeout=30) as response:
+              payload = json.load(response)
+
+          status = payload.get("projectStatus", {})
+          print(f"Quality Gate: {status.get('status')}")
+          for condition in status.get("conditions", []):
+              metric = condition.get("metricKey")
+              actual = condition.get("actualValue")
+              comparator = condition.get("comparator")
+              threshold = condition.get("errorThreshold")
+              result = condition.get("status")
+              print(f"- {metric}: {actual} {comparator} {threshold} => {result}")
+
+          if status.get("status") == "ERROR":
+              sys.exit(1)
+          PY
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}

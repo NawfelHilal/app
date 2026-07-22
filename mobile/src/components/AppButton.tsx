@@ -8,13 +8,27 @@ type Props = {
   variant?: 'primary' | 'secondary' | 'ghost';
   icon?: ReactNode;
   disabled?: boolean;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 };
 
-export function AppButton({ label, onPress, variant = 'primary', icon, disabled }: Props) {
+export function AppButton({
+  label,
+  onPress,
+  variant = 'primary',
+  icon,
+  disabled,
+  accessibilityLabel,
+  accessibilityHint,
+}: Props) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel || label}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: Boolean(disabled) }}
       style={({ pressed }) => [
         styles.button,
         styles[variant],
@@ -46,4 +60,3 @@ const styles = StyleSheet.create({
   label: { color: colors.surface, fontWeight: '800', fontSize: 15 },
   darkLabel: { color: colors.ink },
 });
-

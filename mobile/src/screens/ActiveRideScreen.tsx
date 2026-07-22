@@ -55,7 +55,7 @@ export function ActiveRideScreen({ navigation, route }: Props) {
   if (!ride) {
     return (
       <SafeAreaView style={styles.container}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}><Feather name="arrow-left" size={22} color={colors.ink} /></Pressable>
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Retour" accessibilityHint="Revient à l'écran précédent" style={styles.backButton}><Feather name="arrow-left" size={22} color={colors.ink} /></Pressable>
         <Text style={styles.title}>Course introuvable</Text>
       </SafeAreaView>
     );
@@ -64,7 +64,7 @@ export function ActiveRideScreen({ navigation, route }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}><Feather name="arrow-left" size={22} color={colors.ink} /></Pressable>
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Retour" accessibilityHint="Revient à l'écran précédent" style={styles.backButton}><Feather name="arrow-left" size={22} color={colors.ink} /></Pressable>
         <Text style={styles.headerTitle}>{statusLabel(ride.status)}</Text>
       </View>
       <MapCanvas ride={ride} driverCoordinate={driverCoordinate} />
@@ -75,7 +75,7 @@ export function ActiveRideScreen({ navigation, route }: Props) {
             <Text style={styles.title}>{driverCardTitle(ride.status, plan?.serviceName)}</Text>
             <Text style={styles.muted}>{rideStatusDetail(ride.status, role)} - {driverCardSubtitle(ride.status)}</Text>
           </View>
-          <Pressable style={styles.phoneButton}><Feather name="phone" size={20} color={colors.ink} /></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Appeler le chauffeur" accessibilityHint="Bouton de contact téléphonique du chauffeur" style={styles.phoneButton}><Feather name="phone" size={20} color={colors.ink} /></Pressable>
         </View>
 
         {ride.status === 'REQUESTED' ? <DriverSearchSimulation /> : null}
@@ -199,13 +199,13 @@ function DriverSimulationControls({
   onComplete: () => void;
 }) {
   if (status === 'REQUESTED') {
-    return <AppButton label={submitting ? 'Acceptation...' : 'Accepter la course'} onPress={onAccept} disabled={submitting} />;
+    return <AppButton label={submitting ? 'Acceptation...' : 'Accepter la course'} onPress={onAccept} disabled={submitting} accessibilityHint="Affecte la course au chauffeur connecté" />;
   }
   if (status === 'ACCEPTED') {
-    return <AppButton label={submitting ? 'Mise a jour...' : 'Passager recupere'} onPress={onStart} disabled={submitting} />;
+    return <AppButton label={submitting ? 'Mise a jour...' : 'Passager recupere'} onPress={onStart} disabled={submitting} accessibilityHint="Passe la course en statut trajet en cours" />;
   }
   if (status === 'IN_PROGRESS') {
-    return <AppButton label={submitting ? 'Cloture...' : 'Deposer le passager'} onPress={onComplete} disabled={submitting} />;
+    return <AppButton label={submitting ? 'Cloture...' : 'Deposer le passager'} onPress={onComplete} disabled={submitting} accessibilityHint="Termine la course et confirme l'arrivée" />;
   }
   if (status === 'COMPLETED') {
     return <AppButton label="Course terminee" onPress={() => undefined} variant="secondary" disabled />;
@@ -240,8 +240,8 @@ function PassengerSimulationHint({
       </View>
       {status !== 'COMPLETED' && status !== 'CANCELED' ? (
         <>
-          {process.env.EXPO_PUBLIC_ENABLE_DEMO_SIMULATION === 'true' ? <AppButton label={submitting ? 'Simulation...' : simulationButtonLabel(status)} onPress={onSimulate} disabled={submitting} /> : null}
-          <AppButton label="Annuler la course" onPress={onCancel} disabled={submitting} variant="secondary" />
+          {process.env.EXPO_PUBLIC_ENABLE_DEMO_SIMULATION === 'true' ? <AppButton label={submitting ? 'Simulation...' : simulationButtonLabel(status)} onPress={onSimulate} disabled={submitting} accessibilityHint="Fait avancer la course démo à l'étape suivante" /> : null}
+          <AppButton label="Annuler la course" onPress={onCancel} disabled={submitting} variant="secondary" accessibilityHint="Annule la demande ou la course active" />
         </>
       ) : null}
     </View>

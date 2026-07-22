@@ -60,7 +60,12 @@ export function MapCanvas({ compact, ride, simulationPhase, driverCoordinate }: 
   }, [animation.from.latitude, animation.from.longitude, animation.to.latitude, animation.to.longitude, compact, driverCoordinate?.latitude, driverCoordinate?.longitude, phase]);
 
   return (
-    <View style={[styles.wrap, compact && styles.compact]}>
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={`Carte du trajet entre le point de départ et la destination. Statut ${phase}.`}
+      style={[styles.wrap, compact && styles.compact]}
+    >
       <MapView
         style={styles.map}
         customMapStyle={darkMapStyle}

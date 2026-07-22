@@ -7,12 +7,20 @@ type Props = {
   subtitle?: string;
   icon?: ReactNode;
   onPress?: () => void;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 };
 
-export function FieldPill({ title, subtitle, icon, onPress }: Props) {
+export function FieldPill({ title, subtitle, icon, onPress, accessibilityLabel, accessibilityHint }: Props) {
   return (
-    <Pressable onPress={onPress} style={styles.container}>
-      <View style={styles.icon}>{icon}</View>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole={onPress ? 'button' : 'text'}
+      accessibilityLabel={accessibilityLabel || `${title}${subtitle ? `, ${subtitle}` : ''}`}
+      accessibilityHint={accessibilityHint}
+      style={styles.container}
+    >
+      <View style={styles.icon} accessible={false}>{icon}</View>
       <View style={styles.texts}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
@@ -39,4 +47,3 @@ const styles = StyleSheet.create({
   title: { color: colors.ink, fontWeight: '800', fontSize: 16 },
   subtitle: { color: colors.muted, marginTop: 2 },
 });
-
