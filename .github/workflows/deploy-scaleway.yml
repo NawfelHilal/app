@@ -84,6 +84,9 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "$SCALEWAY_SSH_PRIVATE_KEY" > ~/.ssh/scaleway
           chmod 600 ~/.ssh/scaleway
+          ssh-keygen -y -f ~/.ssh/scaleway > ~/.ssh/scaleway.pub
+          echo "GitHub Actions SSH public key fingerprint:"
+          ssh-keygen -lf ~/.ssh/scaleway.pub
           ssh-keyscan -H "$SCALEWAY_SSH_HOST" >> ~/.ssh/known_hosts
         env:
           SCALEWAY_SSH_HOST: ${{ secrets.SCALEWAY_SSH_HOST }}
