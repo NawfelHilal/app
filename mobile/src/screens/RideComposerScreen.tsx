@@ -14,7 +14,7 @@ import { useRideStore } from '../store/rides';
 import { colors } from '../theme/colors';
 import { formatEuro } from '../theme/format';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'RideComposer'>;
+type Props = Readonly<NativeStackScreenProps<RootStackParamList, 'RideComposer'>>;
 
 export function RideComposerScreen({ navigation }: Props) {
   const [selectedPlaceId, setSelectedPlaceId] = useState(savedPlaces[1].id);
