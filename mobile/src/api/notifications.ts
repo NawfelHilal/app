@@ -14,7 +14,7 @@ Notifications.setNotificationHandler({
 });
 
 export async function registerPushToken(): Promise<void> {
-  if (!Device.isDevice || Constants.appOwnership === 'expo') {
+  if (!Device.isDevice || Constants.executionEnvironment === Constants.ExecutionEnvironment.StoreClient) {
     return;
   }
   if (Platform.OS === 'android') {

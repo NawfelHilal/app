@@ -7,7 +7,7 @@ import { RootStackParamList } from '../navigation/RootNavigator';
 import { useAuthStore } from '../store/auth';
 import { colors } from '../theme/colors';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
+type Props = Readonly<NativeStackScreenProps<RootStackParamList, 'Register'>>;
 
 export function RegisterScreen({ navigation }: Props) {
   const [role, setRole] = useState<UserRole>('PASSENGER');

@@ -14,7 +14,7 @@ import { useRideStore } from '../store/rides';
 import { colors } from '../theme/colors';
 import { formatEuro, statusLabel } from '../theme/format';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'PassengerShell'>;
+type Props = Readonly<NativeStackScreenProps<RootStackParamList, 'PassengerShell'>>;
 type PassengerTab = 'home' | 'activity' | 'wallet' | 'account';
 
 const tabs: TabItem<PassengerTab>[] = [

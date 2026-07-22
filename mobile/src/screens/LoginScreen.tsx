@@ -8,11 +8,12 @@ import { useAuthStore } from '../store/auth';
 import { colors } from '../theme/colors';
 import { RootStackParamList } from '../navigation/RootNavigator';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
+type Props = Readonly<NativeStackScreenProps<RootStackParamList, 'Login'>>;
 
 export function LoginScreen({ navigation }: Props) {
+  const demoPassword = process.env.EXPO_PUBLIC_DEMO_PASSWORD || '';
   const [username, setUsername] = useState('passenger');
-  const [password, setPassword] = useState('password123');
+  const [password, setPassword] = useState(demoPassword);
   const [loading, setLoading] = useState(false);
   const login = useAuthStore((state) => state.login);
 
@@ -29,6 +30,14 @@ export function LoginScreen({ navigation }: Props) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function submitDemo(demoUsername: string) {
+    if (!demoPassword) {
+      Alert.alert('Démo non configurée', 'Définis EXPO_PUBLIC_DEMO_PASSWORD pour activer la connexion démo.');
+      return;
+    }
+    submit({ username: demoUsername, password: demoPassword });
   }
 
   return (
@@ -71,7 +80,7 @@ export function LoginScreen({ navigation }: Props) {
       </Pressable>
       <View style={styles.demoRow}>
         <Pressable
-          onPress={() => submit({ username: 'passenger', password: 'password123' })}
+          onPress={() => submitDemo('passenger')}
           disabled={loading}
           accessibilityRole="button"
           accessibilityLabel="Connexion passager démo"
@@ -82,7 +91,7 @@ export function LoginScreen({ navigation }: Props) {
           <Text style={styles.demoText}>Passager démo</Text>
         </Pressable>
         <Pressable
-          onPress={() => submit({ username: 'driver', password: 'password123' })}
+          onPress={() => submitDemo('driver')}
           disabled={loading}
           accessibilityRole="button"
           accessibilityLabel="Connexion chauffeur démo"
@@ -101,7 +110,9 @@ export function LoginScreen({ navigation }: Props) {
       >
         <Text style={styles.register}>Créer un compte</Text>
       </Pressable>
-      <Text style={styles.helper}>passenger / password123 ou driver / password123</Text>
+      <Text style={styles.helper}>
+        {demoPassword ? 'Comptes démo disponibles : passenger ou driver' : 'Connexion démo désactivée sans variable EXPO_PUBLIC_DEMO_PASSWORD'}
+      </Text>
     </SafeAreaView>
   );
 }

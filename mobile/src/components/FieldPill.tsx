@@ -2,21 +2,24 @@ import { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
 
-type Props = {
+type Props = Readonly<{
   title: string;
   subtitle?: string;
   icon?: ReactNode;
   onPress?: () => void;
   accessibilityLabel?: string;
   accessibilityHint?: string;
-};
+}>;
 
 export function FieldPill({ title, subtitle, icon, onPress, accessibilityLabel, accessibilityHint }: Props) {
+  const subtitleLabel = subtitle ? `, ${subtitle}` : '';
+  const defaultAccessibilityLabel = `${title}${subtitleLabel}`;
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole={onPress ? 'button' : 'text'}
-      accessibilityLabel={accessibilityLabel || `${title}${subtitle ? `, ${subtitle}` : ''}`}
+      accessibilityLabel={accessibilityLabel || defaultAccessibilityLabel}
       accessibilityHint={accessibilityHint}
       style={styles.container}
     >

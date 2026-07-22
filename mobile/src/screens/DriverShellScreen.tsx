@@ -15,7 +15,7 @@ import { colors } from '../theme/colors';
 import { formatEuro, statusLabel } from '../theme/format';
 
 type DriverTab = 'drive' | 'requests' | 'earnings' | 'account';
-type Props = NativeStackScreenProps<RootStackParamList, 'DriverShell'>;
+type Props = Readonly<NativeStackScreenProps<RootStackParamList, 'DriverShell'>>;
 
 const tabs: TabItem<DriverTab>[] = [
   { key: 'drive', label: 'Accueil', icon: <Feather name="navigation" size={18} color={colors.ink} /> },

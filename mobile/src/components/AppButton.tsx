@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { colors } from '../theme/colors';
 
-type Props = {
+type Props = Readonly<{
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'ghost';
@@ -10,7 +10,7 @@ type Props = {
   disabled?: boolean;
   accessibilityLabel?: string;
   accessibilityHint?: string;
-};
+}>;
 
 export function AppButton({
   label,

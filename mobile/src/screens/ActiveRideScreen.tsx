@@ -13,7 +13,7 @@ import { useRideStore } from '../store/rides';
 import { colors } from '../theme/colors';
 import { formatEuro, statusLabel } from '../theme/format';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'ActiveRide'>;
+type Props = Readonly<NativeStackScreenProps<RootStackParamList, 'ActiveRide'>>;
 
 export function ActiveRideScreen({ navigation, route }: Props) {
   const [submitting, setSubmitting] = useState(false);
