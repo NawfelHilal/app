@@ -11,6 +11,16 @@ Le projet couvre un parcours complet passager/chauffeur : inscription, connexion
 - Intégrer une qualité de code vérifiable : tests, couverture, lint, audits de sécurité et SonarQube.
 - Préparer une infrastructure exploitable localement avec Docker Compose et déployable sur Scaleway.
 
+## Utilisation actuelle recommandée
+
+La version de démonstration actuelle est déjà déployée sur le serveur Scaleway. Le backend Django, le service GPS NestJS, PostgreSQL, Redis et Nginx tournent donc côté serveur.
+
+Pour tester l’application sur smartphone, il n’est pas nécessaire de lancer toute la stack en local. Le mode recommandé consiste uniquement à lancer l’application mobile Expo depuis le PC, puis à scanner le QR code avec Expo Go. Le mobile communique directement avec l’API et le service GPS hébergés sur Scaleway.
+
+Pour que le téléphone puisse se connecter au serveur Metro d’Expo lancé sur le PC, il faut renseigner l’IPv4 locale du PC dans `REACT_NATIVE_PACKAGER_HOSTNAME`. Cette adresse se récupère avec la commande `ipconfig` sous Windows.
+
+Docker Compose local reste disponible pour le développement complet ou pour travailler hors serveur, mais il n’est pas obligatoire pour une recette mobile classique.
+
 ## Fonctionnalités principales
 
 ### Passager
@@ -82,13 +92,93 @@ Rôles des blocs :
 
 ## Prérequis
 
-- Docker Desktop lancé.
-- Node.js compatible avec le projet mobile/GPS.
-- Python 3.12 si lancement backend hors Docker.
-- Expo Go sur téléphone pour tester rapidement l’application mobile.
-- Un terminal PowerShell sous Windows.
+- Pour tester uniquement l’application mobile avec Scaleway :
+  - Node.js compatible avec le projet mobile.
+  - Expo Go sur téléphone.
+  - Un terminal PowerShell sous Windows.
+- Pour lancer toute la stack en local :
+  - Docker Desktop lancé.
+  - Python 3.12 si lancement backend hors Docker.
+
+## Tester l’application mobile avec Scaleway
+
+C’est le mode recommandé actuellement. Le backend, le service GPS, PostgreSQL, Redis et Nginx sont déjà disponibles sur le serveur Scaleway. Il faut donc lancer uniquement l’application mobile Expo sur le PC.
+
+Dans ce mode, le PC sert seulement à démarrer Expo. Le téléphone appelle directement les services hébergés sur Scaleway.
+
+Architecture de test :
+
+```txt
+iPhone / Expo Go
+  |
+  | HTTP / WebSocket
+  v
+Serveur Scaleway
+  |
+  | Nginx -> Backend Django / GPS NestJS / Redis / PostgreSQL
+```
+
+Variables à mettre dans `mobile/.env` :
+
+```env
+EXPO_PUBLIC_API_URL=http://51.158.102.141/api/v1
+EXPO_PUBLIC_GPS_URL=http://51.158.102.141
+REACT_NATIVE_PACKAGER_HOSTNAME=192.168.1.20
+EXPO_PUBLIC_USE_SIMULATED_PAYMENT=true
+EXPO_PUBLIC_ENABLE_DEMO_SIMULATION=true
+EXPO_PUBLIC_DEMO_PASSWORD=password123
+```
+
+Remplacer `51.158.102.141` par le domaine ou l’IP actuelle du serveur Scaleway.
+Remplacer `192.168.1.20` par l’IPv4 locale du PC qui lance Expo.
+
+Pour trouver l’IPv4 locale sous Windows :
+
+```powershell
+ipconfig
+```
+
+Utiliser la valeur `Adresse IPv4` de la carte Wi-Fi ou Ethernet connectée au même réseau que le téléphone.
+
+Lancer ensuite uniquement Expo :
+
+```powershell
+cd mobile
+npm install
+npx expo start --lan --clear
+```
+
+Si le QR code LAN ne fonctionne pas sur le téléphone :
+
+```powershell
+npx expo start --tunnel --clear
+```
+
+Dans ce mode, ne pas lancer localement :
+
+- `backend`,
+- `gps-service`,
+- `postgres`,
+- `redis`,
+- `nginx`.
+
+Avant de tester le mobile, vérifier que Scaleway répond :
+
+```powershell
+Invoke-WebRequest http://51.158.102.141/health
+Invoke-WebRequest http://51.158.102.141/api/v1/health/
+```
+
+Après chaque modification de `mobile/.env`, relancer Expo avec `--clear` pour éviter que Metro garde d’anciennes variables.
+
+Comptes de démonstration disponibles sur Scaleway :
+
+- Passager : `passenger` / `password123`
+- Chauffeur : `driver` / `password123`
 
 ## Installation locale avec Docker
+
+Cette section est utile pour développer ou tester toute l’infrastructure sur le PC. Elle n’est pas nécessaire si les services backend, GPS, PostgreSQL, Redis et Nginx sont déjà actifs sur Scaleway.
 
 Depuis la racine du projet :
 
@@ -129,6 +219,8 @@ docker compose up --build
 
 ## Initialisation des données
 
+Cette section concerne uniquement le lancement local complet avec Docker. Pour le serveur Scaleway de démonstration, les données nécessaires sont déjà initialisées.
+
 En local, le backend exécute automatiquement les migrations et le seed démo au démarrage Docker.
 
 Commandes manuelles utiles :
@@ -150,7 +242,7 @@ Le mot de passe démo peut être affiché côté mobile avec :
 EXPO_PUBLIC_DEMO_PASSWORD=password123
 ```
 
-## Tester sur téléphone avec Expo Go
+## Tester toute la stack locale sur téléphone avec Expo Go
 
 Expo Go ne peut pas appeler correctement `localhost` depuis un téléphone. Il faut utiliser l’IP Wi-Fi du PC.
 
@@ -184,66 +276,6 @@ npx expo start --lan --clear
 ```
 
 Puis scanner le QR code avec Expo Go.
-
-## Tester uniquement le mobile avec Scaleway
-
-Quand le backend, le service GPS, PostgreSQL, Redis et Nginx tournent déjà sur Scaleway, il n’est pas nécessaire de lancer tout Docker Compose en local.
-
-Dans ce cas, le PC sert uniquement à démarrer Expo, et le téléphone appelle directement les services hébergés sur Scaleway.
-
-Architecture de test :
-
-```txt
-iPhone / Expo Go
-  |
-  | HTTP / WebSocket
-  v
-Serveur Scaleway
-  |
-  | Nginx -> Backend Django / GPS NestJS / Redis / PostgreSQL
-```
-
-Variables à mettre dans `mobile/.env` :
-
-```env
-EXPO_PUBLIC_API_URL=http://51.158.102.141/api/v1
-EXPO_PUBLIC_GPS_URL=http://51.158.102.141
-EXPO_PUBLIC_USE_SIMULATED_PAYMENT=true
-EXPO_PUBLIC_ENABLE_DEMO_SIMULATION=true
-EXPO_PUBLIC_DEMO_PASSWORD=password123
-```
-
-Remplacer `51.158.102.141` par le domaine ou l’IP actuelle du serveur Scaleway.
-
-Ensuite lancer uniquement Expo :
-
-```powershell
-cd mobile
-npx expo start --lan --clear
-```
-
-Si le QR code LAN ne fonctionne pas sur le téléphone :
-
-```powershell
-npx expo start --tunnel --clear
-```
-
-Dans ce mode, ne pas lancer localement :
-
-- `backend`,
-- `gps-service`,
-- `postgres`,
-- `redis`,
-- `nginx`.
-
-Avant de tester le mobile, vérifier que Scaleway répond :
-
-```powershell
-Invoke-WebRequest http://51.158.102.141/health
-Invoke-WebRequest http://51.158.102.141/api/v1/health/
-```
-
-Après chaque modification de `mobile/.env`, relancer Expo avec `--clear` pour éviter que Metro garde d’anciennes variables.
 
 ## Mode démo
 
