@@ -122,7 +122,7 @@ export function RideComposerScreen({ navigation }: Props) {
             value={note}
             onChangeText={setNote}
             placeholder="Note au chauffeur"
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={colors.placeholder}
             style={styles.input}
             accessibilityLabel="Note au chauffeur"
             accessibilityHint="Ajoutez une information utile pour le chauffeur"

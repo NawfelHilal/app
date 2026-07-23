@@ -3,6 +3,7 @@ export const colors = {
   surface: '#ffffff',
   ink: '#0b0b0c',
   muted: '#6b7280',
+  placeholder: '#4b5563',
   subtle: '#e8e8e8',
   line: '#dedede',
   success: '#138a50',
@@ -10,4 +11,3 @@ export const colors = {
   accent: '#0b0b0c',
   softAccent: '#eeeeee',
 };
-

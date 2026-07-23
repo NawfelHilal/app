@@ -60,7 +60,7 @@ export function LoginScreen({ navigation, route }: Props) {
         onChangeText={setUsername}
         autoCapitalize="none"
         placeholder="Identifiant"
-        placeholderTextColor={colors.muted}
+        placeholderTextColor={colors.placeholder}
         style={styles.input}
         accessibilityLabel="Identifiant"
         accessibilityHint="Saisissez votre nom d'utilisateur FleetPro"
@@ -71,7 +71,7 @@ export function LoginScreen({ navigation, route }: Props) {
         onChangeText={setPassword}
         secureTextEntry
         placeholder="Mot de passe"
-        placeholderTextColor={colors.muted}
+        placeholderTextColor={colors.placeholder}
         style={styles.input}
         accessibilityLabel="Mot de passe"
         accessibilityHint="Saisissez votre mot de passe"
