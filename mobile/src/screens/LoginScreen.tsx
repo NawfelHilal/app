@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AxiosError } from 'axios';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -10,12 +10,20 @@ import { RootStackParamList } from '../navigation/RootNavigator';
 
 type Props = Readonly<NativeStackScreenProps<RootStackParamList, 'Login'>>;
 
-export function LoginScreen({ navigation }: Props) {
+export function LoginScreen({ navigation, route }: Props) {
+  const selectedRole = route.params.role;
+  const isDriver = selectedRole === 'DRIVER';
+  const demoUsername = isDriver ? 'driver' : 'passenger';
   const demoPassword = process.env.EXPO_PUBLIC_DEMO_PASSWORD || '';
-  const [username, setUsername] = useState('passenger');
+  const [username, setUsername] = useState(demoUsername);
   const [password, setPassword] = useState(demoPassword);
   const [loading, setLoading] = useState(false);
   const login = useAuthStore((state) => state.login);
+
+  useEffect(() => {
+    setUsername(demoUsername);
+    setPassword(demoPassword);
+  }, [demoPassword, demoUsername]);
 
   async function submit(credentials?: { username: string; password: string }) {
     setLoading(true);
@@ -44,7 +52,9 @@ export function LoginScreen({ navigation }: Props) {
     <SafeAreaView style={styles.container}>
       <View style={styles.logoMark}><Text style={styles.logoText}>F</Text></View>
       <Text style={styles.brand}>FleetPro</Text>
-      <Text style={styles.subtitle}>Courses VTC ethiques, commission fixe et experience chauffeur claire.</Text>
+      <Text style={styles.subtitle}>
+        {isDriver ? 'Connexion chauffeur partenaire FleetPro.' : 'Connexion passager pour commander une course FleetPro.'}
+      </Text>
       <TextInput
         value={username}
         onChangeText={setUsername}
@@ -80,38 +90,35 @@ export function LoginScreen({ navigation }: Props) {
       </Pressable>
       <View style={styles.demoRow}>
         <Pressable
-          onPress={() => submitDemo('passenger')}
+          onPress={() => submitDemo(demoUsername)}
           disabled={loading}
           accessibilityRole="button"
-          accessibilityLabel="Connexion passager démo"
-          accessibilityHint="Connecte automatiquement le compte passager de démonstration"
+          accessibilityLabel={isDriver ? 'Connexion chauffeur démo' : 'Connexion passager démo'}
+          accessibilityHint={isDriver ? 'Connecte automatiquement le compte chauffeur de démonstration' : 'Connecte automatiquement le compte passager de démonstration'}
           accessibilityState={{ disabled: loading }}
           style={styles.demoButton}
         >
-          <Text style={styles.demoText}>Passager démo</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => submitDemo('driver')}
-          disabled={loading}
-          accessibilityRole="button"
-          accessibilityLabel="Connexion chauffeur démo"
-          accessibilityHint="Connecte automatiquement le compte chauffeur de démonstration"
-          accessibilityState={{ disabled: loading }}
-          style={styles.demoButton}
-        >
-          <Text style={styles.demoText}>Chauffeur démo</Text>
+          <Text style={styles.demoText}>{isDriver ? 'Chauffeur démo' : 'Passager démo'}</Text>
         </Pressable>
       </View>
       <Pressable
-        onPress={() => navigation.navigate('Register')}
+        onPress={() => navigation.navigate('Register', { role: selectedRole })}
         accessibilityRole="button"
-        accessibilityLabel="Créer un compte"
-        accessibilityHint="Ouvre le formulaire d'inscription"
+        accessibilityLabel={isDriver ? 'Créer un compte chauffeur' : 'Créer un compte passager'}
+        accessibilityHint="Ouvre le formulaire d'inscription adapté au rôle choisi"
       >
-        <Text style={styles.register}>Créer un compte</Text>
+        <Text style={styles.register}>{isDriver ? 'Créer un compte chauffeur' : 'Créer un compte passager'}</Text>
+      </Pressable>
+      <Pressable
+        onPress={() => navigation.navigate('RoleSelection')}
+        accessibilityRole="button"
+        accessibilityLabel="Changer de profil"
+        accessibilityHint="Revient au choix passager ou chauffeur"
+      >
+        <Text style={styles.register}>Changer de profil</Text>
       </Pressable>
       <Text style={styles.helper}>
-        {demoPassword ? 'Comptes démo disponibles : passenger ou driver' : 'Connexion démo désactivée sans variable EXPO_PUBLIC_DEMO_PASSWORD'}
+        {demoPassword ? `Compte démo disponible : ${demoUsername}` : 'Connexion démo désactivée sans variable EXPO_PUBLIC_DEMO_PASSWORD'}
       </Text>
     </SafeAreaView>
   );

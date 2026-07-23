@@ -9,6 +9,7 @@
     "test": "node scripts/run-tests.js",
     "test:coverage": "node scripts/run-tests.js --coverage",
     "lint": "eslint \"src/**/*.ts\"",
+    "security:audit": "npm audit --audit-level=high --omit=dev",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

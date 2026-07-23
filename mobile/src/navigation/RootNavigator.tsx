@@ -8,10 +8,13 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { PassengerShellScreen } from '../screens/PassengerShellScreen';
 import { RideComposerScreen } from '../screens/RideComposerScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
+import { RoleSelectionScreen } from '../screens/RoleSelectionScreen';
+import { UserRole } from '../api/client';
 
 export type RootStackParamList = {
-  Login: undefined;
-  Register: undefined;
+  RoleSelection: undefined;
+  Login: { role: Extract<UserRole, 'PASSENGER' | 'DRIVER'> };
+  Register: { role: Extract<UserRole, 'PASSENGER' | 'DRIVER'> };
   PassengerShell: undefined;
   DriverShell: undefined;
   RideComposer: undefined;
@@ -38,6 +41,7 @@ export function RootNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!isLoggedIn ? (
         <>
+          <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
         </>

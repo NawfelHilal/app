@@ -9,8 +9,8 @@ import { colors } from '../theme/colors';
 
 type Props = Readonly<NativeStackScreenProps<RootStackParamList, 'Register'>>;
 
-export function RegisterScreen({ navigation }: Props) {
-  const [role, setRole] = useState<UserRole>('PASSENGER');
+export function RegisterScreen({ navigation, route }: Props) {
+  const [role, setRole] = useState<UserRole>(route.params.role);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

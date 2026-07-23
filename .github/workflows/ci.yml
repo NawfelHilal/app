@@ -31,6 +31,8 @@ jobs:
         working-directory: backend
       - run: bandit -r apps -x "*/migrations/*" --severity-level medium
         working-directory: backend
+      - run: pip-audit -r requirements.txt --strict
+        working-directory: backend
       - run: coverage run manage.py test tests
         working-directory: backend
         env:
@@ -62,6 +64,8 @@ jobs:
           node-version: "24"
       - run: npm ci
         working-directory: gps-service
+      - run: npm run security:audit
+        working-directory: gps-service
       - run: npm run lint
         working-directory: gps-service
       - run: npm run test:coverage
@@ -84,6 +88,8 @@ jobs:
         with:
           node-version: "24"
       - run: npm ci
+        working-directory: mobile
+      - run: npm run security:audit
         working-directory: mobile
       - run: npm run lint
         working-directory: mobile
