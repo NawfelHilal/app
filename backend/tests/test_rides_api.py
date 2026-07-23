@@ -191,6 +191,19 @@ class RideApiTests(APITestCase):
         self.assertEqual(male_response.data, [])
         self.assertEqual([ride["id"] for ride in pmr_response.data], [pmr_ride.id])
 
+    def test_fleet_luxe_ride_is_visible_to_standard_driver(self):
+        passenger = create_user("luxe-passenger")
+        driver = create_user("luxe-driver", role="DRIVER")
+        DriverProfile.objects.create(user=driver, license_number="LUXE-LICENSE", gender=DriverProfile.Gender.MALE)
+        luxe_ride = create_ride(passenger, service_type=Ride.ServiceType.FLEET_LUXE)
+
+        with patch("apps.rides.views.RideMatcher.nearby_ride_ids", return_value=[luxe_ride.id]):
+            self.client.force_authenticate(driver)
+            response = self.client.get("/api/v1/rides/")
+
+        self.assertEqual([ride["id"] for ride in response.data], [luxe_ride.id])
+        self.assertEqual(response.data[0]["service_type"], Ride.ServiceType.FLEET_LUXE)
+
     def test_ineligible_driver_cannot_accept_special_service(self):
         passenger = create_user("special-passenger")
         driver = create_user("special-driver", role="DRIVER")

@@ -18,8 +18,8 @@ describe('demo places and ride options', () => {
   });
 
   it('keeps ride options stable and ordered from cheapest to largest', () => {
-    expect(rideOptions.map((option) => option.id)).toEqual(['STANDARD', 'FLEETHER', 'FLEET_PMR']);
-    expect(rideOptions.map((option) => option.multiplier)).toEqual([1, 1.18, 1.35]);
+    expect(rideOptions.map((option) => option.id)).toEqual(['STANDARD', 'FLEETHER', 'FLEET_PMR', 'FLEET_LUXE']);
+    expect(rideOptions.map((option) => option.multiplier)).toEqual([1, 1.18, 1.35, 1.65]);
     expect(rideOptions.every((option) => option.name.startsWith('Fleet'))).toBe(true);
     expect(rideOptions.every((option) => option.description.length > 0)).toBe(true);
   });

@@ -63,4 +63,12 @@ export const rideOptions = [
     multiplier: 1.35,
     description: 'Service avec véhicule adapté aux personnes à mobilité réduite.',
   },
+  {
+    id: 'FLEET_LUXE',
+    name: 'FleetLuxe',
+    seats: 'Berline premium',
+    eta: '7 min',
+    multiplier: 1.65,
+    description: 'Service premium avec chauffeur et véhicule haut de gamme.',
+  },
 ];

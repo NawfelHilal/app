@@ -32,7 +32,7 @@ export type UserRole = 'PASSENGER' | 'DRIVER' | 'ADMIN';
 export type Ride = {
   id: number;
   status: 'REQUESTED' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED';
-  service_type: 'STANDARD' | 'FLEETHER' | 'FLEET_PMR';
+  service_type: 'STANDARD' | 'FLEETHER' | 'FLEET_PMR' | 'FLEET_LUXE';
   pickup_label: string;
   pickup_latitude?: string;
   pickup_longitude?: string;

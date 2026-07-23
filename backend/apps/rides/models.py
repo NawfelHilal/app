@@ -65,6 +65,7 @@ class Ride(models.Model):
         STANDARD = "STANDARD", "Standard"
         FLEETHER = "FLEETHER", "FleetHer"
         FLEET_PMR = "FLEET_PMR", "Fleet PMR"
+        FLEET_LUXE = "FLEET_LUXE", "FleetLuxe"
 
     passenger = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="passenger_rides")
     driver = models.ForeignKey(

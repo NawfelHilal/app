@@ -45,7 +45,7 @@ export function RideComposerScreen({ navigation }: Props) {
     serviceId: selectedService.id,
     serviceName: selectedService.name,
     eta: selectedService.eta,
-    service_type: selectedService.id as 'STANDARD' | 'FLEETHER' | 'FLEET_PMR',
+    service_type: selectedService.id as 'STANDARD' | 'FLEETHER' | 'FLEET_PMR' | 'FLEET_LUXE',
     pickup_label: 'Position actuelle',
     pickup_latitude: pickup.latitude,
     pickup_longitude: pickup.longitude,
