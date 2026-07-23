@@ -1,83 +1,510 @@
 # FleetPro
 
-FleetPro est une plateforme VTC ethique cloud-native composee de trois blocs:
+FleetPro est une plateforme VTC éthique et cloud-native développée dans le cadre d’un projet de fin d’année Master.
+Le projet couvre un parcours complet passager/chauffeur : inscription, connexion, demande de course, matching chauffeur, suivi GPS temps réel, paiement, simulation de course et déploiement cloud.
 
-- `backend/`: API metier Django REST Framework avec JWT, courses, paiements Stripe et notifications.
-- `gps-service/`: satellite NestJS Socket.io pour les positions GPS temps reel stockees dans Redis avec TTL.
-- `mobile/`: application Expo React Native TypeScript pour les parcours passager et chauffeur.
+## Objectifs du projet
 
-## Demarrage local
+- Proposer une alternative VTC avec une commission fixe de `15 %`.
+- Séparer le backend métier du service GPS temps réel.
+- Fournir une application mobile Expo utilisable en mode passager ou chauffeur.
+- Intégrer une qualité de code vérifiable : tests, couverture, lint, audits de sécurité et SonarQube.
+- Préparer une infrastructure exploitable localement avec Docker Compose et déployable sur Scaleway.
+
+## Fonctionnalités principales
+
+### Passager
+
+- Création de compte passager.
+- Connexion avec JWT.
+- Choix d’un trajet de démonstration : `Hôtel Negresco` vers `Aéroport Nice Côte d’Azur`.
+- Choix du service :
+  - `Fleet Standard` : course classique.
+  - `FleetHer` : course proposée uniquement aux chauffeurs femmes éligibles.
+  - `Fleet PMR` : course proposée uniquement aux chauffeurs avec véhicule adapté PMR.
+  - `FleetLuxe` : course premium.
+- Estimation du prix côté backend.
+- Paiement Stripe en mode test ou paiement simulé en mode démo.
+- Suivi de la course et simulation des étapes.
+
+### Chauffeur
+
+- Création de compte chauffeur.
+- Formulaire professionnel :
+  - permis,
+  - carte professionnelle VTC,
+  - entreprise/statut,
+  - SIRET,
+  - assurance professionnelle,
+  - genre pour l’éligibilité FleetHer,
+  - véhicule,
+  - adaptation PMR.
+- Passage en ligne avec publication GPS via Socket.io.
+- Réception des demandes proches.
+- Bouton de démonstration pour générer une demande passager proche du chauffeur.
+- Acceptation, démarrage et clôture de course.
+
+### Backend et infrastructure
+
+- API REST Django REST Framework.
+- Authentification JWT avec refresh token.
+- HATEOAS partiel via `_links` sur les ressources clés.
+- PostgreSQL pour les données persistantes.
+- Redis pour les positions GPS temporaires.
+- NestJS + Socket.io pour le GPS temps réel.
+- Nginx comme API Gateway.
+- Docker Compose local et production.
+- CI GitHub Actions avec tests, coverage, lint, audits sécurité et SonarQube Community Build.
+
+## Architecture
+
+```txt
+Mobile Expo
+  | HTTP / WebSocket
+  v
+Nginx API Gateway
+  | REST                       | Socket.io
+  v                            v
+Django REST API                NestJS GPS Service
+  | SQL                        | Redis GEO + TTL
+  v                            v
+PostgreSQL                     Redis
+```
+
+Rôles des blocs :
+
+- `backend/` : API métier Django, comptes, chauffeurs, véhicules, courses, paiements, notifications.
+- `gps-service/` : service NestJS Socket.io pour les positions chauffeurs et le matching proche.
+- `mobile/` : application Expo React Native TypeScript.
+- `infra/nginx/` : reverse proxy local et production.
+- `deploy/` et `DEPLOY_SCALEWAY.md` : scripts et documentation de déploiement Scaleway.
+- `docs/` : documentation technique, API, qualité, accessibilité, SonarQube et dossier Bloc 2.
+
+## Prérequis
+
+- Docker Desktop lancé.
+- Node.js compatible avec le projet mobile/GPS.
+- Python 3.12 si lancement backend hors Docker.
+- Expo Go sur téléphone pour tester rapidement l’application mobile.
+- Un terminal PowerShell sous Windows.
+
+## Installation locale avec Docker
+
+Depuis la racine du projet :
 
 ```powershell
 Copy-Item .env.example .env
 docker compose up --build
 ```
 
-Services exposes:
+Docker démarre :
 
-- API Gateway Nginx: `http://localhost:8090`
-- API Core: `http://localhost:8090/api/v1`
-- WebSocket GPS Socket.io: `http://localhost:8090/socket.io`
-- Backend direct: `http://localhost:8000`
-- GPS direct: `http://localhost:3001`
-- Expo mobile: `http://localhost:8081`
+- PostgreSQL,
+- Redis,
+- backend Django,
+- GPS NestJS,
+- Nginx,
+- Expo mobile.
 
-Pour tester sur un telephone avec Expo Go, le plus fiable est d'utiliser l'IP Wi-Fi du PC dans `.env`:
+Endpoints locaux :
 
-```powershell
-ipconfig
-```
+- API Gateway : `http://localhost:8090`
+- API REST : `http://localhost:8090/api/v1`
+- WebSocket GPS : `http://localhost:8090/socket.io`
+- Backend direct : `http://localhost:8000`
+- GPS direct : `http://localhost:3001`
+- Expo Metro : `http://localhost:8081`
 
-Remplace ensuite `localhost` par ton IPv4 Wi-Fi, par exemple:
-
-```env
-EXPO_PUBLIC_API_URL=http://192.168.1.20:8090/api/v1
-EXPO_PUBLIC_GPS_URL=http://192.168.1.20:8090
-REACT_NATIVE_PACKAGER_HOSTNAME=192.168.1.20
-```
-
-Puis relance:
+Pour arrêter :
 
 ```powershell
-docker compose up --build mobile
+docker compose down
 ```
 
-Pour le paiement reel en mode test, renseigne `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` et `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`. Le webhook cible `/api/v1/payments/webhook/`.
-
-Les notifications push exigent un development build Expo configure avec les fichiers Firebase/APNs natifs. `FIREBASE_CREDENTIALS_PATH` doit pointer vers le compte de service Firebase monte dans le backend.
-
-Alternative hors Docker:
+Pour relancer proprement :
 
 ```powershell
-cd mobile
-npm install
-npx expo start --lan
+docker compose up --build
 ```
 
-## Carte mobile
+## Initialisation des données
 
-Le mobile reste compatible Expo Go. La carte utilise `react-native-maps` avec un style sombre proche d'une experience VTC premium.
+En local, le backend exécute automatiquement les migrations et le seed démo au démarrage Docker.
 
-Mapbox reel necessite un development build, donc il n'est pas active tant que le projet doit tourner uniquement dans Expo Go.
-
-## Commandes utiles
+Commandes manuelles utiles :
 
 ```powershell
 docker compose exec backend python manage.py migrate
 docker compose exec backend python manage.py seed_demo
 docker compose exec backend python manage.py createsuperuser
-docker compose exec backend pytest
-docker compose exec gps-service npm test
 ```
 
-Comptes demo crees par `seed_demo`:
+Comptes de démonstration :
 
-- Passager: `passenger` / `password123`
-- Chauffeur: `driver` / `password123`
+- Passager : `passenger` / `password123`
+- Chauffeur : `driver` / `password123`
 
-## Architecture
+Le mot de passe démo peut être affiché côté mobile avec :
 
-Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-Voir aussi [docs/API.md](docs/API.md) pour les endpoints REST et Socket.io.
-En cas de probleme Docker, npm ou Expo, voir [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
-Pour heberger sur Scaleway avec Docker Compose ou Kubernetes Kapsule, voir [DEPLOY_SCALEWAY.md](DEPLOY_SCALEWAY.md).
+```env
+EXPO_PUBLIC_DEMO_PASSWORD=password123
+```
+
+## Tester sur téléphone avec Expo Go
+
+Expo Go ne peut pas appeler correctement `localhost` depuis un téléphone. Il faut utiliser l’IP Wi-Fi du PC.
+
+1. Trouver l’IPv4 du PC :
+
+```powershell
+ipconfig
+```
+
+2. Modifier `.env` avec l’IP Wi-Fi, par exemple :
+
+```env
+EXPO_PUBLIC_API_URL=http://192.168.1.20:8090/api/v1
+EXPO_PUBLIC_GPS_URL=http://192.168.1.20:8090
+REACT_NATIVE_PACKAGER_HOSTNAME=192.168.1.20
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend,192.168.1.20
+```
+
+3. Relancer le mobile :
+
+```powershell
+docker compose up --build mobile
+```
+
+Alternative hors Docker :
+
+```powershell
+cd mobile
+npm install
+npx expo start --lan --clear
+```
+
+Puis scanner le QR code avec Expo Go.
+
+## Tester uniquement le mobile avec Scaleway
+
+Quand le backend, le service GPS, PostgreSQL, Redis et Nginx tournent déjà sur Scaleway, il n’est pas nécessaire de lancer tout Docker Compose en local.
+
+Dans ce cas, le PC sert uniquement à démarrer Expo, et le téléphone appelle directement les services hébergés sur Scaleway.
+
+Architecture de test :
+
+```txt
+iPhone / Expo Go
+  |
+  | HTTP / WebSocket
+  v
+Serveur Scaleway
+  |
+  | Nginx -> Backend Django / GPS NestJS / Redis / PostgreSQL
+```
+
+Variables à mettre dans `mobile/.env` :
+
+```env
+EXPO_PUBLIC_API_URL=http://51.158.102.141/api/v1
+EXPO_PUBLIC_GPS_URL=http://51.158.102.141
+EXPO_PUBLIC_USE_SIMULATED_PAYMENT=true
+EXPO_PUBLIC_ENABLE_DEMO_SIMULATION=true
+EXPO_PUBLIC_DEMO_PASSWORD=password123
+```
+
+Remplacer `51.158.102.141` par le domaine ou l’IP actuelle du serveur Scaleway.
+
+Ensuite lancer uniquement Expo :
+
+```powershell
+cd mobile
+npx expo start --lan --clear
+```
+
+Si le QR code LAN ne fonctionne pas sur le téléphone :
+
+```powershell
+npx expo start --tunnel --clear
+```
+
+Dans ce mode, ne pas lancer localement :
+
+- `backend`,
+- `gps-service`,
+- `postgres`,
+- `redis`,
+- `nginx`.
+
+Avant de tester le mobile, vérifier que Scaleway répond :
+
+```powershell
+Invoke-WebRequest http://51.158.102.141/health
+Invoke-WebRequest http://51.158.102.141/api/v1/health/
+```
+
+Après chaque modification de `mobile/.env`, relancer Expo avec `--clear` pour éviter que Metro garde d’anciennes variables.
+
+## Mode démo
+
+Le mode démo permet de tester le projet sans paiement réel et sans vrai chauffeur dans la rue.
+
+Variables importantes :
+
+```env
+ENABLE_DEMO_SIMULATION=true
+EXPO_PUBLIC_ENABLE_DEMO_SIMULATION=true
+EXPO_PUBLIC_USE_SIMULATED_PAYMENT=true
+```
+
+Scénario conseillé :
+
+1. Se connecter en chauffeur avec `driver`.
+2. Passer le chauffeur en ligne.
+3. Cliquer sur `Simuler une demande client proche`.
+4. Aller dans l’onglet `Courses`.
+5. Accepter la demande.
+6. Ouvrir le suivi de course.
+
+Le scénario de démonstration est centré sur Nice :
+
+- récupération : `Hôtel Negresco`,
+- destination : `Aéroport Nice Côte d’Azur`,
+- chauffeur simulé proche du Negresco.
+
+## Paiement Stripe
+
+Deux modes existent :
+
+- Paiement simulé pour la démonstration locale.
+- Stripe test/réel via PaymentIntent.
+
+Variables Stripe :
+
+```env
+STRIPE_SECRET_KEY=sk_test_change_me
+STRIPE_WEBHOOK_SECRET=whsec_change_me
+EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_change_me
+EXPO_PUBLIC_USE_SIMULATED_PAYMENT=false
+```
+
+Le webhook Stripe cible :
+
+```txt
+/api/v1/payments/webhook/
+```
+
+Le mobile ne manipule jamais la clé secrète Stripe.
+
+## Notifications push
+
+Le backend contient une abstraction de notification compatible Firebase Cloud Messaging.
+
+Variable :
+
+```env
+FIREBASE_CREDENTIALS_PATH=
+```
+
+Les notifications natives nécessitent un development build Expo avec configuration Firebase/APNs. Expo Go suffit pour tester le reste du projet, mais pas les notifications push natives complètes.
+
+## Commandes de qualité
+
+### Backend
+
+```powershell
+cd backend
+..\.venv\Scripts\python.exe -m ruff check .
+..\.venv\Scripts\python.exe -m bandit -r apps -x "*/migrations/*" --severity-level medium
+..\.venv\Scripts\python.exe -m pip_audit -r requirements.txt --strict
+```
+
+Avec Docker :
+
+```powershell
+docker compose exec backend python manage.py test tests
+```
+
+### GPS service
+
+```powershell
+cd gps-service
+npm run lint
+npm run typecheck
+npm run test:coverage
+npm run security:audit
+```
+
+### Mobile
+
+```powershell
+cd mobile
+npm run lint
+npm run typecheck
+npm run test:coverage
+npm run security:audit
+```
+
+## CI/CD
+
+La CI GitHub Actions vérifie :
+
+- backend Django :
+  - Ruff,
+  - Bandit,
+  - pip-audit,
+  - tests,
+  - coverage minimum,
+  - migrations Django.
+- GPS NestJS :
+  - npm audit,
+  - lint,
+  - tests avec coverage,
+  - typecheck,
+  - build.
+- Mobile Expo :
+  - npm audit,
+  - lint,
+  - tests avec coverage,
+  - typecheck.
+- SonarQube Community Build :
+  - analyse qualité,
+  - bugs,
+  - maintenabilité,
+  - couverture,
+  - Quality Gate.
+
+Le workflow de build EAS permet de lancer un build mobile Expo depuis GitHub Actions avec un `EXPO_TOKEN`.
+
+## Déploiement Scaleway
+
+Le projet peut être déployé sur une instance Scaleway avec Docker Compose production.
+
+Documentation dédiée :
+
+- `DEPLOY_SCALEWAY.md`
+- `docs/DEPLOY_SCALEWAY_CI.md`
+- `deploy/README_SCALEWAY_UPLOAD.md`
+
+Fichier de production :
+
+```powershell
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+```
+
+Après déploiement ou changement de modèle Django :
+
+```powershell
+docker compose --env-file .env.prod -f docker-compose.prod.yml exec backend python manage.py migrate
+```
+
+Vérification santé :
+
+```powershell
+Invoke-WebRequest http://51.158.102.141/health
+Invoke-WebRequest http://51.158.102.141/api/v1/health/
+```
+
+Remplacer l’IP par l’adresse réelle du serveur ou par le domaine configuré.
+
+## Variables d’environnement principales
+
+### Backend
+
+- `DJANGO_SECRET_KEY`
+- `DJANGO_DEBUG`
+- `DJANGO_ALLOWED_HOSTS`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_HOST`
+- `POSTGRES_PORT`
+- `JWT_SIGNING_KEY`
+- `REDIS_URL`
+- `GPS_MATCH_RADIUS_KM`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `FIREBASE_CREDENTIALS_PATH`
+- `ENABLE_DEMO_SIMULATION`
+
+### GPS
+
+- `GPS_JWT_SECRET`
+- `REDIS_URL`
+- `CORE_API_URL`
+
+### Mobile
+
+- `EXPO_PUBLIC_API_URL`
+- `EXPO_PUBLIC_GPS_URL`
+- `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- `EXPO_PUBLIC_USE_SIMULATED_PAYMENT`
+- `EXPO_PUBLIC_ENABLE_DEMO_SIMULATION`
+- `EXPO_PUBLIC_DEMO_PASSWORD`
+- `REACT_NATIVE_PACKAGER_HOSTNAME`
+
+Les fichiers `.env`, `.env.prod` et `mobile/.env` ne doivent pas être commités avec de vrais secrets.
+
+## Documentation complémentaire
+
+- Architecture : `docs/ARCHITECTURE.md`
+- API REST et Socket.io : `docs/API.md`
+- Accessibilité : `docs/ACCESSIBILITY.md`
+- Qualité de code : `docs/CODE_QUALITY.md`
+- SonarQube : `docs/SONARQUBE.md`
+- Dépannage : `docs/TROUBLESHOOTING.md`
+- Déploiement Scaleway : `DEPLOY_SCALEWAY.md`
+
+## Dépannage rapide
+
+### Docker Desktop non lancé
+
+Erreur typique :
+
+```txt
+Cannot connect to the Docker daemon
+```
+
+Solution : lancer Docker Desktop puis relancer :
+
+```powershell
+docker compose up --build
+```
+
+### Port déjà utilisé
+
+Erreur typique :
+
+```txt
+ports are not available
+```
+
+Solution : arrêter l’ancien service ou changer le port dans `docker-compose.yml`.
+
+### Expo Go ne se connecte pas
+
+Utiliser l’IP Wi-Fi du PC au lieu de `localhost` dans `.env`, puis relancer Expo.
+
+### Erreur HTTP 401
+
+Vérifier :
+
+- que l’utilisateur existe,
+- que le mot de passe est correct,
+- que `JWT_SIGNING_KEY` et `GPS_JWT_SECRET` sont cohérents,
+- que le mobile pointe vers le bon `EXPO_PUBLIC_API_URL`.
+
+### Simulation chauffeur impossible
+
+Vérifier :
+
+```env
+ENABLE_DEMO_SIMULATION=true
+EXPO_PUBLIC_ENABLE_DEMO_SIMULATION=true
+```
+
+Puis redémarrer backend et mobile.
+
+## Licence
+
+Projet académique réalisé dans le cadre d’un parcours Master Expert en développement logiciel.
