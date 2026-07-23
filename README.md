@@ -118,7 +118,13 @@ Serveur Scaleway
   | Nginx -> Backend Django / GPS NestJS / Redis / PostgreSQL
 ```
 
-Variables à mettre dans `mobile/.env` :
+Créer le fichier d’environnement mobile depuis l’exemple :
+
+```powershell
+Copy-Item mobile/.env.example mobile/.env
+```
+
+Variables présentes dans `mobile/.env` :
 
 ```env
 EXPO_PUBLIC_API_URL=http://51.158.102.141/api/v1
@@ -441,10 +447,17 @@ Remplacer l’IP par l’adresse réelle du serveur ou par le domaine configuré
 
 ## Variables d’environnement principales
 
+Les exemples ont été volontairement simplifiés :
+
+- `.env.example` sert uniquement au lancement complet en local avec Docker.
+- `.env.prod.example` sert uniquement aux conteneurs du serveur Scaleway.
+- `mobile/.env.example` sert au test actuel avec Expo Go et le backend déjà hébergé sur Scaleway.
+
 ### Backend
 
 - `DJANGO_SECRET_KEY`
 - `DJANGO_DEBUG`
+- `DJANGO_SECURE_SSL_REDIRECT`
 - `DJANGO_ALLOWED_HOSTS`
 - `POSTGRES_DB`
 - `POSTGRES_USER`
@@ -453,10 +466,6 @@ Remplacer l’IP par l’adresse réelle du serveur ou par le domaine configuré
 - `POSTGRES_PORT`
 - `JWT_SIGNING_KEY`
 - `REDIS_URL`
-- `GPS_MATCH_RADIUS_KM`
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `FIREBASE_CREDENTIALS_PATH`
 - `ENABLE_DEMO_SIMULATION`
 
 ### GPS
@@ -469,11 +478,18 @@ Remplacer l’IP par l’adresse réelle du serveur ou par le domaine configuré
 
 - `EXPO_PUBLIC_API_URL`
 - `EXPO_PUBLIC_GPS_URL`
-- `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - `EXPO_PUBLIC_USE_SIMULATED_PAYMENT`
 - `EXPO_PUBLIC_ENABLE_DEMO_SIMULATION`
 - `EXPO_PUBLIC_DEMO_PASSWORD`
 - `REACT_NATIVE_PACKAGER_HOSTNAME`
+
+Variables optionnelles non nécessaires au mode démo actuel :
+
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- `FIREBASE_CREDENTIALS_PATH`
+- `GPS_MATCH_RADIUS_KM`
 
 Les fichiers `.env`, `.env.prod` et `mobile/.env` ne doivent pas être commités avec de vrais secrets.
 
