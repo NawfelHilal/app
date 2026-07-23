@@ -26,12 +26,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r backend/requirements-dev.txt
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements-dev.txt
+        working-directory: backend
       - run: ruff check .
         working-directory: backend
       - run: bandit -r apps -x "*/migrations/*" --severity-level medium
         working-directory: backend
-      - run: pip-audit -r requirements.txt --strict
+      - run: python -m pip_audit -r requirements.txt --strict
         working-directory: backend
       - run: coverage run manage.py test tests
         working-directory: backend
