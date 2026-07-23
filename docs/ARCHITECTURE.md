@@ -1,47 +1,114 @@
 # Architecture FleetPro
 
-## Vue d'ensemble
+## 1. Objectif du document
 
-FleetPro separe le metier transactionnel du temps reel:
+Ce document décrit l’architecture technique de FleetPro, les responsabilités de chaque composant et les choix structurants réalisés pour garantir la maintenabilité, la sécurité et l’évolutivité du projet.
 
-- Le core Django porte les donnees durables: utilisateurs, chauffeurs, courses, paiements, tokens de notification.
-- Le satellite GPS NestJS porte uniquement l'etat ephemere des positions chauffeurs.
-- Redis expire automatiquement les positions GPS pour eviter d'afficher un chauffeur inactif.
-- Nginx centralise les entrees HTTP et WebSocket.
+FleetPro suit une architecture modulaire composée :
+
+- d’un backend métier Django REST Framework ;
+- d’un service temps réel GPS NestJS ;
+- d’une application mobile Expo React Native ;
+- d’une passerelle Nginx ;
+- d’un stockage relationnel PostgreSQL ;
+- d’un stockage éphémère Redis pour les positions GPS.
+
+## 2. Vue d’ensemble
 
 ```txt
-Mobile Expo
-  | HTTPS / WSS
+Application mobile Expo
+  | HTTP / WebSocket
   v
-Nginx
-  | REST                  | Socket.io
-  v                       v
-Django REST API           NestJS GPS
-  | SQL                   | GEO + TTL
-  v                       v
-PostgreSQL                Redis
+Nginx API Gateway
+  | REST                       | Socket.io
+  v                            v
+Backend Django REST            Service GPS NestJS
+  | SQL                        | Redis GEO + TTL
+  v                            v
+PostgreSQL                     Redis
 ```
 
-## Choix structurants
+L’architecture sépare les responsabilités transactionnelles des responsabilités temps réel :
 
-- Commission plateforme fixe: `15 %`, calculee cote backend dans le domaine `rides`.
-- JWT partage: SimpleJWT cote Django, secret compatible cote GPS pour authentifier les sockets.
-- Paiement Stripe: le backend cree les PaymentIntents, le mobile ne manipule jamais de secret.
-- Paiement demo: un gateway simule l'autorisation puis la capture en fin de course pour presenter le flux complet sans dependance externe.
-- Notifications: abstraction `PushNotificationGateway` pour garder Firebase remplacable et testable.
-- GPS: positions TTL dans Redis et index GEO separe pour les recherches de chauffeurs proches.
+- le backend Django conserve les données durables : utilisateurs, chauffeurs, véhicules, courses, paiements et notifications ;
+- le service GPS NestJS gère uniquement les positions chauffeurs et la diffusion temps réel ;
+- Redis stocke les positions GPS avec une durée de vie limitée afin d’éviter de proposer des chauffeurs inactifs ;
+- Nginx centralise l’exposition HTTP et WebSocket.
 
-## Domaines backend
+## 3. Composants applicatifs
 
-- `accounts`: roles, inscription, profil courant.
-- `rides`: devis, cycle de vie d'une course, commission.
-- `payments`: PaymentIntent Stripe et etat local.
-- `notifications`: enregistrement de devices et envoi push.
+| Composant | Technologie | Responsabilité |
+| --- | --- | --- |
+| `mobile/` | Expo, React Native, TypeScript | Interfaces passager et chauffeur, appels REST, connexion Socket.io, paiement mobile |
+| `backend/` | Django, DRF, SimpleJWT | Authentification, comptes, courses, paiements, notifications, règles métier |
+| `gps-service/` | NestJS, Socket.io | Publication GPS, recherche de chauffeurs proches, diffusion temps réel |
+| `postgres` | PostgreSQL | Stockage persistant des données métier |
+| `redis` | Redis | Stockage éphémère des positions chauffeurs |
+| `nginx` | Nginx | Reverse proxy REST et WebSocket |
 
-## Qualite attendue Bloc 2
+## 4. Domaines backend
 
-- Separation des responsabilites par application Django.
-- Services metier testables hors des vues.
-- Variables d'environnement pour secrets et endpoints.
-- CI avec tests backend, tests GPS et verification TypeScript mobile.
-- Infrastructure locale reproductible via Docker Compose.
+Le backend Django est découpé par domaines fonctionnels :
+
+- `accounts` : utilisateurs, rôles, profil courant, changement de mot de passe ;
+- `rides` : devis, demande de course, cycle de vie, éligibilité FleetHer/Fleet PMR/FleetLuxe ;
+- `payments` : PaymentIntent Stripe, paiement simulé, webhook et état de paiement ;
+- `notifications` : enregistrement des terminaux et abstraction d’envoi push.
+
+Cette séparation facilite les tests, limite le couplage et permet d’isoler les règles métier importantes dans des services dédiés.
+
+## 5. Flux principaux
+
+### Demande de course
+
+1. Le passager choisit une destination et un type de service depuis l’application mobile.
+2. Le mobile demande un devis au backend ou crée directement une course.
+3. Le backend calcule le prix, la commission FleetPro et le gain chauffeur.
+4. La course passe à l’état `REQUESTED`.
+5. Les chauffeurs proches et éligibles peuvent voir la demande.
+
+### Matching chauffeur
+
+1. Le chauffeur passe en ligne depuis l’application mobile.
+2. Le mobile publie la position via Socket.io.
+3. Le service GPS stocke la position dans Redis avec TTL.
+4. Le backend interroge le matching pour filtrer les courses proches.
+5. Le backend applique ensuite les règles d’éligibilité métier.
+
+### Suivi temps réel
+
+1. Une course acceptée crée un lien entre passager et chauffeur.
+2. Les deux clients rejoignent la salle Socket.io de la course.
+3. Les positions du chauffeur sont diffusées uniquement aux utilisateurs autorisés.
+
+## 6. Choix structurants
+
+- Commission fixe : la commission FleetPro est calculée côté backend à `15 %`.
+- JWT partagé : Django émet les tokens JWT, le service GPS les vérifie avec le même secret.
+- Paiement sécurisé : le mobile ne manipule jamais la clé secrète Stripe.
+- Paiement simulé : un mode de démonstration permet de tester le flux complet sans dépendre de Stripe.
+- Éligibilité serveur : FleetHer et Fleet PMR sont contrôlés côté backend, pas uniquement dans l’interface.
+- GPS éphémère : les positions sont stockées dans Redis avec expiration automatique.
+- Reverse proxy unique : Nginx simplifie l’exposition de l’API REST et du WebSocket.
+
+## 7. Sécurité
+
+Les principaux mécanismes de sécurité sont :
+
+- authentification JWT avec refresh token ;
+- permissions DRF selon les rôles passager/chauffeur/staff ;
+- vérification d’accès aux rooms WebSocket ;
+- secrets externalisés dans des variables d’environnement ;
+- calculs tarifaires réalisés côté serveur ;
+- validation des webhooks Stripe ;
+- audits de dépendances dans la CI.
+
+## 8. Exploitabilité
+
+FleetPro peut être exécuté :
+
+- localement avec `docker-compose.yml` ;
+- en production MVP avec `docker-compose.prod.yml` sur une instance Scaleway ;
+- en cible cloud-native avec Kubernetes Kapsule.
+
+La CI GitHub Actions vérifie les tests, la couverture, le typage, le linting, les audits sécurité et l’analyse SonarQube.

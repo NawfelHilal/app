@@ -1,53 +1,77 @@
 # Déploiement Scaleway
 
-Ce guide propose deux chemins de production pour FleetPro sur Scaleway :
+## 1. Objectif du document
 
-- **Instance + Docker Compose** : recommandé pour le MVP/rendu, simple à opérer.
-- **Kubernetes Kapsule** : recommandé si tu veux montrer une architecture cloud native plus avancée.
+Ce document décrit la procédure de déploiement de FleetPro sur Scaleway. Il couvre deux scénarios :
 
-Dans les deux cas, utilise de préférence :
+- **Instance Scaleway + Docker Compose** : scénario retenu pour le MVP et la démonstration, avec un coût maîtrisé.
+- **Kubernetes Kapsule** : scénario cible pour une architecture cloud-native plus industrialisée.
 
-- **Container Registry** Scaleway pour les images `backend` et `gps-service`.
-- **PostgreSQL + Redis dans Docker** pour le MVP économique sur Instance.
-- **Managed PostgreSQL + Managed Redis** seulement si tu veux une production plus robuste et payante.
-- **Load Balancer/TLS** Scaleway ou Ingress Kubernetes pour exposer HTTPS.
+Le scénario Instance + Docker Compose héberge le backend, le service GPS, PostgreSQL, Redis et Nginx sur une même machine virtuelle. L’application mobile est construite séparément via Expo/EAS et consomme l’API exposée par Scaleway.
 
-## 1. Préparer les variables
+## 2. Architecture de production MVP
 
-Copie l’exemple de production :
+```txt
+Mobile Expo / EAS
+  | HTTP / WebSocket
+  v
+Instance Scaleway
+  |
+  | Nginx
+  |-- Backend Django
+  |-- GPS NestJS
+  |-- PostgreSQL
+  |-- Redis
+```
+
+Cette architecture permet de valider le fonctionnement bout-en-bout sans souscrire immédiatement à des services managés payants.
+
+## 3. Prérequis
+
+- Instance Scaleway Linux avec IP publique.
+- Docker et Docker Compose installés sur l’instance.
+- Container Registry Scaleway créé.
+- Images `fleetpro-backend` et `fleetpro-gps-service` poussées dans le registry.
+- Fichier `.env.prod` présent sur le serveur.
+- Groupe de sécurité Scaleway autorisant au minimum les ports `22` et `80`.
+
+## 4. Variables de production
+
+Créer le fichier à partir du modèle :
 
 ```powershell
 Copy-Item .env.prod.example .env.prod
 ```
 
-Puis remplace au minimum :
+Variables minimales à définir :
 
 - `DJANGO_SECRET_KEY`
 - `JWT_SIGNING_KEY`
 - `GPS_JWT_SECRET`
 - `POSTGRES_PASSWORD`
 - `DJANGO_ALLOWED_HOSTS`
-- `DJANGO_SECURE_SSL_REDIRECT` : `false` sans HTTPS, `true` dès que le Load Balancer/TLS est prêt.
 - `CORS_ALLOWED_ORIGINS`
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
+- `SCALEWAY_REGISTRY`
+- `IMAGE_TAG`
 
-Important : `JWT_SIGNING_KEY` et `GPS_JWT_SECRET` doivent avoir la même valeur, avec au moins 32 caractères.
+`JWT_SIGNING_KEY` et `GPS_JWT_SECRET` doivent avoir la même valeur et contenir au moins 32 caractères.
 
-## 2. Builder et pousser les images
+En production réelle, `ENABLE_DEMO_SIMULATION` doit être positionné à `false`. Pour une démonstration encadrée, il peut être temporairement activé.
 
-Crée un namespace Scaleway Container Registry, par exemple `fleet-pro`.
+## 5. Build et push des images
 
-Connexion au registry :
+Connexion au Container Registry Scaleway :
 
 ```powershell
-$env:SCW_SECRET_KEY="ton_secret_key_scaleway"
+$env:SCW_SECRET_KEY="secret-key-scaleway"
 $env:SCALEWAY_REGISTRY="rg.fr-par.scw.cloud/fleet-pro"
 $env:IMAGE_TAG=(git rev-parse --short HEAD)
 $env:SCW_SECRET_KEY | docker login $env:SCALEWAY_REGISTRY -u nologin --password-stdin
 ```
 
-Build local :
+Build :
 
 ```powershell
 docker compose --env-file .env.prod -f docker-compose.prod.yml build
@@ -59,141 +83,145 @@ Push :
 docker compose --env-file .env.prod -f docker-compose.prod.yml push
 ```
 
-## 3. Déploiement simple économique : Instance + Docker Compose
+## 6. Déploiement sur l’instance
 
-Sur une Instance Scaleway Ubuntu :
+Connexion SSH :
 
-1. Installe Docker et Docker Compose.
-2. Copie le projet ou clone ton dépôt.
-3. Copie `.env.prod` sur le serveur.
-4. Connecte Docker au registry Scaleway.
-5. Lance la stack avec PostgreSQL et Redis inclus dans Docker.
-
-Commandes :
-
-```bash
-export SCALEWAY_REGISTRY="rg.fr-par.scw.cloud/fleet-pro"
-export IMAGE_TAG="latest"
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml logs -f
+```powershell
+ssh root@51.158.102.141
 ```
 
-Si tu utilises uniquement `.env.prod` pour `SCALEWAY_REGISTRY` et `IMAGE_TAG`, lance plutôt :
+Placement recommandé du projet :
+
+```bash
+mkdir -p /opt/fleetpro
+cd /opt/fleetpro
+```
+
+Connexion Docker au registry depuis le serveur :
+
+```bash
+echo "$SCW_SECRET_KEY" | docker login rg.fr-par.scw.cloud/fleet-pro -u nologin --password-stdin
+```
+
+Récupération des images :
 
 ```bash
 docker compose --env-file .env.prod -f docker-compose.prod.yml pull
+```
+
+Démarrage :
+
+```bash
 docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+```
+
+Suivi des logs :
+
+```bash
 docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f
 ```
 
-Cette stack crée deux volumes persistants :
+## 7. Migrations et données de démonstration
 
-- `postgres_prod_data` pour PostgreSQL.
-- `redis_prod_data` pour Redis.
-
-Tu ne paies donc pas Managed PostgreSQL/Redis. Tu paies seulement l’Instance Scaleway et son disque.
-
-Sauvegarde PostgreSQL manuelle :
+Les migrations sont exécutées au démarrage du conteneur backend. Elles peuvent aussi être relancées manuellement :
 
 ```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres pg_dump -U fleetpro fleetpro > fleetpro_backup.sql
+docker compose --env-file .env.prod -f docker-compose.prod.yml exec backend python manage.py migrate
 ```
 
-Exposition recommandée :
-
-- Mets un Load Balancer Scaleway devant l’Instance.
-- Termine TLS/HTTPS sur le Load Balancer.
-- Redirige vers le port `80` de l’Instance.
-- Configure `DJANGO_ALLOWED_HOSTS` avec ton domaine API.
-- Passe `DJANGO_SECURE_SSL_REDIRECT=true` quand HTTPS fonctionne.
-
-Endpoints à vérifier :
+Pour créer ou réinitialiser les comptes de démonstration :
 
 ```bash
-curl https://api.ton-domaine.com/health
-curl https://api.ton-domaine.com/api/v1/health/
+docker compose --env-file .env.prod -f docker-compose.prod.yml exec backend python manage.py seed_demo
 ```
 
-## 4. Déploiement Kubernetes : Kapsule
+Comptes démo :
 
-### 4.1 Préparer le cluster
+- passager : `passenger`
+- chauffeur : `driver`
 
-Récupère le kubeconfig du cluster Kapsule :
+Le mot de passe doit rester réservé à un environnement de démonstration.
+
+## 8. Vérifications de santé
+
+Depuis le serveur :
 
 ```bash
-scw k8s kubeconfig install <cluster-id>
-kubectl get nodes
+curl http://127.0.0.1/health
+curl http://127.0.0.1/api/v1/health/
 ```
 
-Installe ensuite un Ingress Controller NGINX et `cert-manager` si ton cluster ne les a pas déjà.
+Depuis le poste local :
 
-### 4.2 Adapter les manifests
-
-Dans `infra/k8s/scaleway/kustomization.yaml`, remplace :
-
-```yaml
-newName: rg.fr-par.scw.cloud/your-namespace/fleetpro-backend
-newName: rg.fr-par.scw.cloud/your-namespace/fleetpro-gps-service
-newTag: latest
+```powershell
+Invoke-WebRequest http://51.158.102.141/health
+Invoke-WebRequest http://51.158.102.141/api/v1/health/
 ```
 
-Fais le même remplacement d’image backend dans `infra/k8s/scaleway/migrate/kustomization.yaml`.
+Réponses attendues :
 
-Dans `infra/k8s/scaleway/configmap.yaml`, remplace :
+- `/health` : `ok`
+- `/api/v1/health/` : statut applicatif `ok`
 
-- `DJANGO_ALLOWED_HOSTS`
-- `CORS_ALLOWED_ORIGINS`
-- `POSTGRES_HOST`
+## 9. Mobile Expo / EAS
 
-Dans `infra/k8s/scaleway/ingress.yaml`, remplace :
+Le service `mobile` n’est pas déployé comme un conteneur serveur. Il est testé localement avec Expo Go ou construit via EAS Build.
 
-- `api.fleetpro.example.com`
-- `fleetpro-api-tls` si tu veux un autre nom de secret TLS
+Variables GitHub Actions pour EAS :
 
-### 4.3 Créer les secrets Kubernetes
+- `EXPO_PUBLIC_API_URL`
+- `EXPO_PUBLIC_GPS_URL`
+- `EXPO_PUBLIC_USE_SIMULATED_PAYMENT`
+- `EXPO_PUBLIC_ENABLE_DEMO_SIMULATION`
+- `EXPO_PUBLIC_DEMO_PASSWORD`
 
-Namespace :
+Secrets GitHub Actions :
 
-```bash
-kubectl apply -f infra/k8s/scaleway/namespace.yaml
+- `EXPO_TOKEN`
+- `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+
+Exemple de configuration pour un mobile pointant vers Scaleway :
+
+```env
+EXPO_PUBLIC_API_URL=http://51.158.102.141/api/v1
+EXPO_PUBLIC_GPS_URL=http://51.158.102.141
+EXPO_PUBLIC_USE_SIMULATED_PAYMENT=true
+EXPO_PUBLIC_ENABLE_DEMO_SIMULATION=true
 ```
 
-Secret pour tirer les images privées Scaleway :
+## 10. Déploiement automatisé GitHub Actions
 
-```bash
-kubectl create secret docker-registry scaleway-registry \
-  --namespace fleetpro \
-  --docker-server=rg.fr-par.scw.cloud/fleet-pro \
-  --docker-username=nologin \
-  --docker-password="$SCW_SECRET_KEY"
-```
+Le workflow `.github/workflows/deploy-scaleway.yml` peut automatiser :
 
-Secret applicatif :
+1. le build des images ;
+2. le push vers Scaleway Container Registry ;
+3. la connexion SSH à l’instance ;
+4. le `docker compose pull` ;
+5. le redémarrage de la stack ;
+6. l’exécution des migrations ;
+7. l’exécution éventuelle du seed de démonstration.
 
-```bash
-kubectl create secret generic fleetpro-secrets \
-  --namespace fleetpro \
-  --from-literal=DJANGO_SECRET_KEY="change-me" \
-  --from-literal=POSTGRES_PASSWORD="change-me" \
-  --from-literal=REDIS_URL="redis://:password@redis-endpoint:6379/0" \
-  --from-literal=JWT_SIGNING_KEY="same-32-plus-character-secret" \
-  --from-literal=GPS_JWT_SECRET="same-32-plus-character-secret" \
-  --from-literal=STRIPE_SECRET_KEY="sk_live_or_test_change_me" \
-  --from-literal=STRIPE_WEBHOOK_SECRET="whsec_change_me"
-```
+La procédure détaillée et les secrets nécessaires sont documentés dans `docs/DEPLOY_SCALEWAY_CI.md`.
 
-Le fichier `infra/k8s/scaleway/secret.example.yaml` sert uniquement de modèle. Ne le déploie pas tel quel en production.
+## 11. Option Kubernetes Kapsule
 
-### 4.4 Déployer l’application
+Kubernetes Kapsule constitue une cible d’industrialisation. Cette option permet :
 
-Déployer les services :
+- la séparation des workloads ;
+- le scaling horizontal ;
+- l’utilisation d’Ingress et de certificats TLS ;
+- une meilleure stratégie de rolling update.
+
+Les manifests sont placés dans `infra/k8s/scaleway`.
+
+Déploiement :
 
 ```bash
 kubectl apply -k infra/k8s/scaleway
 ```
 
-Lancer les migrations :
+Migrations :
 
 ```bash
 kubectl delete job core-api-migrate -n fleetpro --ignore-not-found
@@ -201,65 +229,32 @@ kubectl apply -k infra/k8s/scaleway/migrate
 kubectl wait --for=condition=complete job/core-api-migrate -n fleetpro --timeout=180s
 ```
 
-Suivre le déploiement :
+Suivi :
 
 ```bash
 kubectl rollout status deployment/core-api -n fleetpro
 kubectl rollout status deployment/gps-service -n fleetpro
 kubectl get ingress -n fleetpro
-kubectl logs -f deployment/core-api -n fleetpro
 ```
 
-## 5. Mobile Expo / EAS
+## 12. Sauvegarde PostgreSQL
 
-Le service `mobile` ne se déploie pas comme conteneur production.
-
-Un workflow GitHub Actions est disponible dans `.github/workflows/eas-build.yml`.
-Il lance un build EAS :
-
-- manuellement avec `workflow_dispatch`;
-- automatiquement sur un tag Git `mobile-v*`, par exemple `mobile-v1.0.0`.
-
-Pour une build mobile réelle :
-
-- `EXPO_PUBLIC_API_URL=https://api.ton-domaine.com/api/v1`
-- `EXPO_PUBLIC_GPS_URL=https://api.ton-domaine.com`
-- `EXPO_PUBLIC_USE_SIMULATED_PAYMENT=false`
-- `EXPO_PUBLIC_ENABLE_DEMO_SIMULATION=false`
-
-À créer dans GitHub :
-
-Secrets :
-
-- `EXPO_TOKEN`
-- `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`
-
-Variables :
-
-- `EXPO_PUBLIC_API_URL`
-- `EXPO_PUBLIC_GPS_URL`
-- `EXPO_PUBLIC_USE_SIMULATED_PAYMENT`
-- `EXPO_PUBLIC_ENABLE_DEMO_SIMULATION`
-
-Créer un token Expo :
+Sauvegarde manuelle :
 
 ```bash
-eas whoami
-eas token:create
+docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres pg_dump -U fleetpro fleetpro > fleetpro_backup.sql
 ```
 
-Lancer un build depuis Git :
+La sauvegarde doit être externalisée avant toute opération risquée sur les volumes Docker.
 
-```bash
-git tag mobile-v1.0.0
-git push origin mobile-v1.0.0
-```
+## 13. Checklist avant démonstration
 
-## 6. Checklist avant démo
-
+- L’instance Scaleway répond en SSH.
+- Le groupe de sécurité autorise le trafic HTTP.
+- Les images backend et GPS sont disponibles dans le registry.
+- `.env.prod` contient des secrets longs et cohérents.
+- `/health` répond en `200`.
 - `/api/v1/health/` répond en `200`.
-- `/socket.io/` est routé vers `gps-service`.
-- Les logs backend ne montrent plus d’avertissement de clé JWT trop courte.
-- Le paiement Stripe est en mode test ou live selon ta démo.
-- Le matching GPS utilise Redis, soit Docker Compose, soit Scaleway Managed Redis.
-- `ENABLE_DEMO_SIMULATION=false` en vraie prod, `true` seulement pour une démo mono-device.
+- Le mobile pointe vers l’URL Scaleway.
+- Le mode démonstration est activé uniquement si nécessaire.
+- Les logs backend et GPS ne montrent pas d’erreurs critiques.
