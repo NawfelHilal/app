@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { Ride } from '../api/client';
+import { demoDriverStart, demoDropoff, demoPickup } from '../data/demoRoute';
 import { colors } from '../theme/colors';
 
 export type MapCoordinate = {
@@ -17,9 +18,9 @@ type Props = {
   driverCoordinate?: MapCoordinate;
 };
 
-const defaultPickup = { latitude: 48.8566, longitude: 2.3522 };
-const defaultDropoff = { latitude: 48.8443, longitude: 2.373 };
-const driverStart = { latitude: 48.865, longitude: 2.342 };
+const defaultPickup = { latitude: demoPickup.latitude, longitude: demoPickup.longitude };
+const defaultDropoff = { latitude: demoDropoff.latitude, longitude: demoDropoff.longitude };
+const driverStart = demoDriverStart;
 
 export function MapCanvas({ compact, ride, simulationPhase, driverCoordinate }: Props) {
   const pickup = parseCoordinate(ride?.pickup_latitude, ride?.pickup_longitude) || defaultPickup;

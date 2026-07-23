@@ -8,6 +8,7 @@ import { getGpsSocket } from '../api/gps';
 import { BottomTabs, TabItem } from '../components/BottomTabs';
 import { MapCanvas } from '../components/MapCanvas';
 import { SectionHeader } from '../components/SectionHeader';
+import { demoDriverStart } from '../data/demoRoute';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { useAuthStore } from '../store/auth';
 import { useRideStore } from '../store/rides';
@@ -124,10 +125,11 @@ export function DriverShellScreen({ navigation }: Props) {
 }
 
 function emitPosition(socket: NonNullable<ReturnType<typeof getGpsSocket>>, location: Location.LocationObject, rideId?: number): Promise<void> {
+  const demoSimulationEnabled = process.env.EXPO_PUBLIC_ENABLE_DEMO_SIMULATION === 'true';
   return new Promise((resolve) => {
     socket.emit('driver:position', {
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
+      latitude: demoSimulationEnabled ? demoDriverStart.latitude : location.coords.latitude,
+      longitude: demoSimulationEnabled ? demoDriverStart.longitude : location.coords.longitude,
       heading: location.coords.heading,
       speed: location.coords.speed,
       rideId,

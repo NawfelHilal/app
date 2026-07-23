@@ -111,12 +111,13 @@ class RideApiTests(APITestCase):
         driver = create_user("simulate-online-driver", role="DRIVER")
         self.client.force_authenticate(driver)
 
-        with patch("apps.rides.matching.Redis.from_url", return_value=FakeGpsRedis()):
+        with patch("apps.rides.matching.Redis.from_url", return_value=FakeGpsRedis(latitude=43.69515, longitude=7.26035)):
             created = self.client.post("/api/v1/rides/simulate-nearby-request/", {}, format="json")
             listed = self.client.get("/api/v1/rides/")
 
         self.assertEqual(created.status_code, 201)
-        self.assertEqual(created.data["pickup_label"], "Demande démo proche chauffeur")
+        self.assertEqual(created.data["pickup_label"], "Hôtel Negresco")
+        self.assertEqual(created.data["dropoff_label"], "Aéroport Nice Côte d’Azur")
         self.assertIn("accept", created.data["_links"])
         self.assertEqual([ride["id"] for ride in listed.data], [created.data["id"]])
 

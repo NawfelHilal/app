@@ -1,3 +1,5 @@
+import { demoDropoff } from './demoRoute';
+
 export type PlaceSuggestion = {
   id: string;
   label: string;
@@ -10,31 +12,31 @@ export type PlaceSuggestion = {
 
 export const savedPlaces: PlaceSuggestion[] = [
   {
-    id: 'home',
-    label: 'Maison',
-    address: 'Rue de Rivoli, Paris',
-    latitude: 48.8566,
-    longitude: 2.3522,
-    distanceKm: '4.80',
-    durationMinutes: 16,
-  },
-  {
-    id: 'station',
-    label: 'Gare de Lyon',
-    address: 'Place Louis-Armand, Paris',
-    latitude: 48.8443,
-    longitude: 2.373,
-    distanceKm: '6.20',
+    id: 'airport',
+    label: demoDropoff.label,
+    address: demoDropoff.address,
+    latitude: demoDropoff.latitude,
+    longitude: demoDropoff.longitude,
+    distanceKm: '6.40',
     durationMinutes: 18,
   },
   {
-    id: 'airport',
-    label: 'Orly',
-    address: 'Aeroport Paris-Orly',
-    latitude: 48.7262,
-    longitude: 2.3652,
-    distanceKm: '18.40',
-    durationMinutes: 32,
+    id: 'old-town',
+    label: 'Vieux Nice',
+    address: 'Cours Saleya, Nice',
+    latitude: 43.695034,
+    longitude: 7.276565,
+    distanceKm: '2.10',
+    durationMinutes: 9,
+  },
+  {
+    id: 'station',
+    label: 'Gare Nice-Ville',
+    address: 'Avenue Thiers, Nice',
+    latitude: 43.704556,
+    longitude: 7.261944,
+    distanceKm: '1.80',
+    durationMinutes: 8,
   },
 ];
 

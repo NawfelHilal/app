@@ -140,11 +140,11 @@ class RideViewSet(
         passenger.set_password("password123")
         passenger.save(update_fields=["email", "role", "password"])
 
-        position = RideMatcher()._driver_position(request.user.id) or (48.8566, 2.3522)
+        position = RideMatcher()._driver_position(request.user.id) or (43.694318, 7.258155)
         quote = FareQuoteSerializer(
             data={
-                "distance_km": "4.80",
-                "duration_minutes": 16,
+                "distance_km": "6.40",
+                "duration_minutes": 18,
                 "service_type": Ride.ServiceType.STANDARD,
             }
         )
@@ -153,12 +153,12 @@ class RideViewSet(
         ride = Ride.objects.create(
             passenger=passenger,
             service_type=Ride.ServiceType.STANDARD,
-            pickup_label="Demande démo proche chauffeur",
+            pickup_label="Hôtel Negresco",
             pickup_latitude=Decimal(str(position[0])),
             pickup_longitude=Decimal(str(position[1])),
-            dropoff_label="Gare de Lyon",
-            dropoff_latitude=Decimal("48.844300"),
-            dropoff_longitude=Decimal("2.373000"),
+            dropoff_label="Aéroport Nice Côte d’Azur",
+            dropoff_latitude=Decimal("43.665278"),
+            dropoff_longitude=Decimal("7.215000"),
             passenger_note="Course générée depuis le mode simulation chauffeur.",
             distance_km=fare.distance_km,
             duration_minutes=fare.duration_minutes,

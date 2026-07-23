@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '../components/AppButton';
 import { FieldPill } from '../components/FieldPill';
 import { MapCanvas } from '../components/MapCanvas';
+import { demoPickup } from '../data/demoRoute';
 import { savedPlaces, rideOptions } from '../data/places';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { useRideStore } from '../store/rides';
@@ -17,19 +18,22 @@ import { formatEuro } from '../theme/format';
 type Props = Readonly<NativeStackScreenProps<RootStackParamList, 'RideComposer'>>;
 
 export function RideComposerScreen({ navigation }: Props) {
-  const [selectedPlaceId, setSelectedPlaceId] = useState(savedPlaces[1].id);
+  const [selectedPlaceId, setSelectedPlaceId] = useState(savedPlaces[0].id);
   const [selectedServiceId, setSelectedServiceId] = useState(rideOptions[0].id);
   const [note, setNote] = useState('');
-  const [pickup, setPickup] = useState({ latitude: 48.8566, longitude: 2.3522 });
+  const [pickup, setPickup] = useState({ latitude: demoPickup.latitude, longitude: demoPickup.longitude });
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const { setCurrentPlan, requestRide, createPaymentIntent, simulatePaymentIntent, cancelRide } = useRideStore();
 
-  const selectedPlace = savedPlaces.find((place) => place.id === selectedPlaceId) || savedPlaces[1];
+  const selectedPlace = savedPlaces.find((place) => place.id === selectedPlaceId) || savedPlaces[0];
   const selectedService = rideOptions.find((option) => option.id === selectedServiceId) || rideOptions[0];
   const baseFare = 350 + Number(selectedPlace.distanceKm) * 145 + selectedPlace.durationMinutes * 35;
   const fare = Math.round(Math.max(baseFare, 850) * selectedService.multiplier);
 
   useEffect(() => {
+    if (process.env.EXPO_PUBLIC_ENABLE_DEMO_SIMULATION === 'true') {
+      return;
+    }
     Location.requestForegroundPermissionsAsync()
       .then(({ status }) => status === 'granted' ? Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }) : undefined)
       .then((location) => {
@@ -46,7 +50,7 @@ export function RideComposerScreen({ navigation }: Props) {
     serviceName: selectedService.name,
     eta: selectedService.eta,
     service_type: selectedService.id as 'STANDARD' | 'FLEETHER' | 'FLEET_PMR' | 'FLEET_LUXE',
-    pickup_label: 'Position actuelle',
+    pickup_label: process.env.EXPO_PUBLIC_ENABLE_DEMO_SIMULATION === 'true' ? demoPickup.label : 'Position actuelle',
     pickup_latitude: pickup.latitude,
     pickup_longitude: pickup.longitude,
     dropoff_label: selectedPlace.label,
