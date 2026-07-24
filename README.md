@@ -135,7 +135,6 @@ EXPO_PUBLIC_ENABLE_DEMO_SIMULATION=true
 EXPO_PUBLIC_DEMO_PASSWORD=password123
 ```
 
-Remplacer `51.158.102.141` par le domaine ou l’IP actuelle du serveur Scaleway.
 Remplacer `192.168.1.20` par l’IPv4 locale du PC qui lance Expo.
 
 Pour trouver l’IPv4 locale sous Windows :
